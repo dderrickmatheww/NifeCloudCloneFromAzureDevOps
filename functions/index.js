@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const geolib = require('geolib');
 admin.initializeApp();
+const FieldValue = admin.firestore.FieldValue;
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -135,13 +136,21 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
 });
 
 exports.lastVisitedTTL = functions.firestore.document('users/{email}')
-.onWrite((snap, context) => { 
-    var currentData = snap.after.get('lastVisted');
+.onWrite(async (change, context) => { 
+    let currentData = change.after.data().lastVisited;
     let db = admin.firestore();
     let email = context.params.email;
+    let userRef = db.collection('users').doc(email);
+    let deletedObj = {};
     for(var prop in currentData) {
-        if(new Date(currentData[prop].checkInTime).getTime() < new Date().getTime() - 86400000) {
-            db.collection("users").doc(email+'/lastVisited/'+prop).delete();
+        functions.logger.log(currentData[prop].checkInTime._seconds);
+        functions.logger.log(currentData[prop].checkInTime._seconds);
+        if(currentData[prop].checkInTime._seconds < new Date().getTime() - 86400) {
+            await userRef.update({
+                ['lastVisited.' + prop]: FieldValue.delete()
+            });
+            deletedObj[prop];
         }
     }
+    functions.logger.log("lastVisitedTTL has deleted buisnessUID: ", deletedObj);
 });
