@@ -135,22 +135,30 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
   }
 });
 
-exports.lastVisitedTTL = functions.firestore.document('users/{email}')
+exports.checkInTTL = functions.firestore.document('users/{email}')
 .onWrite(async (change, context) => { 
-    let currentData = change.after.data().lastVisited;
+    let currentVisited = change.after.data().lastVisited;
+    let currentCheckedIn = change.after.data().checkIn;
     let db = admin.firestore();
     let email = context.params.email;
     let userRef = db.collection('users').doc(email);
     let deletedObj = {};
-    for(var prop in currentData) {
-        functions.logger.log(currentData[prop].checkInTime._seconds);
-        functions.logger.log(currentData[prop].checkInTime._seconds);
+    deletedObj['lastVisited'];
+    deletedObj['checkIn'];
+    for(var prop in currentVisited) {
         if(currentData[prop].checkInTime._seconds < new Date().getTime() - 86400) {
             await userRef.update({
                 ['lastVisited.' + prop]: FieldValue.delete()
             });
-            deletedObj[prop];
+            deletedObj.lastVisited = {
+
+            }
         }
+    }
+    if(currentCheckedIn.checkInTime._seconds < new Date().getTime() - 86400) {
+        await userRef.update({
+            ['checkIn']: FieldValue.delete()
+        });
     }
     functions.logger.log("lastVisitedTTL has deleted buisnessUID: ", deletedObj);
 });
