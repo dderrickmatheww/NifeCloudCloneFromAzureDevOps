@@ -136,29 +136,42 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
 });
 
 exports.checkInTTL = functions.firestore.document('users/{email}')
-.onWrite(async (change, context) => { 
-    let currentVisited = change.after.data().lastVisited;
-    let currentCheckedIn = change.after.data().checkIn;
-    let db = admin.firestore();
-    let email = context.params.email;
-    let userRef = db.collection('users').doc(email);
-    let deletedObj = {};
-    deletedObj['lastVisited'];
-    deletedObj['checkIn'];
-    for(var prop in currentVisited) {
-        if(currentData[prop].checkInTime._seconds < new Date().getTime() - 86400) {
-            await userRef.update({
-                ['lastVisited.' + prop]: FieldValue.delete()
-            });
-            deletedObj.lastVisited = {
-
+.onUpdate(async (change, context) => { 
+    if(change.after.data().checkIn != change.before.data().checkIn) {
+        //Setting DB and context variables
+        let db = admin.firestore();
+        let email = context.params.email;
+        //Grabbing specific properties from user object
+        let currentVisited = change.after.data().lastVisited;
+        let currentCheckedIn = change.after.data().checkIn;
+        //Setting reference
+        let userRef = db.collection('users').doc(email);
+        //Setting log object for Cloud Functions logs
+        let deletedObj = {};
+        deletedObj['lastVisited'];
+        deletedObj['checkIn'];
+        //Checking currentVisited object for outdated data
+        for(var prop in currentVisited) {
+            if(currentData[prop].checkInTime._seconds < new Date().getTime() - 86400) {
+                await userRef.update({
+                    ['lastVisited.' + prop]: FieldValue.delete()
+                });
+                deletedObj.lastVisited[prop];
             }
         }
+        //Checking currentCheckedIn object for outdated data
+        if(currentCheckedIn.checkInTime._seconds < new Date().getTime() - 86400) {
+            await userRef.update({
+                ['checkIn']: FieldValue.delete()
+            });
+            deletedObj.checkIn.updated = true;
+        }
+        else {
+            deletedObj.checkIn.updated = false;
+        }
+        functions.logger.log("lastVisitedTTL has deleted buisnessUID: ", deletedObj);
     }
-    if(currentCheckedIn.checkInTime._seconds < new Date().getTime() - 86400) {
-        await userRef.update({
-            ['checkIn']: FieldValue.delete()
-        });
+    else {
+        functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
     }
-    functions.logger.log("lastVisitedTTL has deleted buisnessUID: ", deletedObj);
 });
