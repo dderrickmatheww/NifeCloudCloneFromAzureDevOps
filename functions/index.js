@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const geolib = require('geolib');
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
+const db = admin.firestore();;
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -11,7 +12,6 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
   let body = JSON.parse(request.body);
   let buisnessUID = body.buisnessUID;
   let userLocation = body.userLocation;
-  let db = admin.firestore();
   let dataObj = {};
   let userArr = [];
   let businessesArr = [];
@@ -136,14 +136,14 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
 });
 
 exports.checkInTTL = functions.firestore.document('users/{email}')
-.onUpdate(async (change, context) => { 
-    if(change.after.data().checkIn != change.before.data().checkIn) {
+.onWrite(async (change, context) => { 
+    if(change.before.data().checkIn && change.after.data().checkIn != change.before.data().checkIn) {
         //Setting DB and context variables
         let db = admin.firestore();
         let email = context.params.email;
         //Grabbing specific properties from user object
-        let currentVisited = change.after.data().lastVisited;
-        let currentCheckedIn = change.after.data().checkIn;
+        let currentVisited = change.before.data().lastVisited;
+        let currentCheckedIn = change.before.data().checkIn;
         //Setting reference
         let userRef = db.collection('users').doc(email);
         //Setting log object for Cloud Functions logs
@@ -152,26 +152,203 @@ exports.checkInTTL = functions.firestore.document('users/{email}')
         deletedObj['checkIn'];
         //Checking currentVisited object for outdated data
         for(var prop in currentVisited) {
-            if(currentData[prop].checkInTime._seconds < new Date().getTime() - 86400) {
-                await userRef.update({
-                    ['lastVisited.' + prop]: FieldValue.delete()
-                });
-                deletedObj.lastVisited[prop];
+            if(currentVisited && currentVisited.checkInTime) {
+                let currentVisitedDateCheck = (new Date().getTime() - parseInt(currentVisited[prop].checkInTime._seconds) > 86400)
+                if(currentVisitedDateCheck) {
+                    await userRef.update({
+                        ['lastVisited.' + prop]: FieldValue.delete()
+                    });
+                    deletedObj.lastVisited[prop];
+                }
             }
         }
-        //Checking currentCheckedIn object for outdated data
-        if(currentCheckedIn.checkInTime._seconds < new Date().getTime() - 86400) {
-            await userRef.update({
-                ['checkIn']: FieldValue.delete()
-            });
-            deletedObj.checkIn.updated = true;
+        if(currentCheckedIn && currentCheckedIn.checkInTime) {
+            let checkInDateCheck = (new Date().getTime() - parseInt(currentCheckedIn.checkInTime._seconds) > 86400)
+            //Checking currentCheckedIn object for outdated data
+            if(checkInDateCheck) {
+                await userRef.update({
+                    checkIn: FieldValue.delete()
+                });
+                deletedObj.checkIn = {
+                    updated: true
+                }
+            }
+            else {
+                deletedObj.checkIn = {
+                    updated: false
+                }
+            }
         }
-        else {
-            deletedObj.checkIn.updated = false;
-        }
-        functions.logger.log("lastVisitedTTL has deleted buisnessUID: ", deletedObj);
+        functions.logger.log("lastVisitedTTL has deleted buisnessUID: " + deletedObj);
     }
     else {
         functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
     }
 });
+
+exports.verifyUser = functions.https.onRequest(async (request, response) => { 
+    let body = JSON.parse(request.body);
+    let user = body.user;
+    let email = body.email;
+    db.collection('users').doc(email).get()
+    .then(async (data) => {
+        if(data.data()){
+            functions.logger.log('verifyUser found a existing user object.');
+            response.json({ result: data.data() });
+        }
+        else {
+            if(user != undefined || user != null) {
+                let userObj = {};
+                userObj['displayName'] = obj.displayName;
+                userObj['email'] = obj.email;
+                userObj['phoneNumber'] = obj.phoneNumber;
+                userObj['photoSource'] = obj.photoURL;
+                userObj['providerId'] = obj.providerId;
+                userObj['uid'] = obj.uid;
+                userObj['providerData'] = {
+                    displayName : obj.displayName,
+                    email : obj.email,
+                    phoneNumber : obj.phoneNumber,
+                    photoSource : obj.photoURL,
+                    providerId : obj.providerId,
+                    uid : obj.uid,
+                }
+                userObj['privacySettings'] = { public: true };
+                db.collection('users').doc(email).set(userObj, { merge: true });
+                response.json({ result: userObj });
+                functions.logger.log('verifyUser created a new user object.');
+            }
+        }
+    })
+    .catch((err) => {
+        response.json({ result: 'failed', error: err });
+        functions.logger.log('verifyUser errored out with a Firebase Error: ' +  err);
+    })
+});
+
+exports.saveLocation = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let email = body.email;
+    let location = body.location;
+    db.collection('users').doc(email)
+    .set({ loginLocation: location }, {merge: true})
+    .then(() => {
+        response.json({ result: 'success' });
+        functions.logger.log('saveLocation saved the location to the user object.');
+    })
+    .catch((error) => {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log('saveLocation errored out with a Firebase Error: ' +  error);
+    });
+});
+
+exports.getUserData = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let email = body.email;
+    db.collection('users').doc(email).get()
+    .then((data) => {
+      if(data.data()){
+        db.collection('users').doc(email)
+        .set({ lastLoginAt: new Date().toUTCString() }, { merge: true });
+        response.json({ result: data.data() });
+      }
+      else {
+        response.json({ result: {} });
+        functions.logger.log('No data found. Error: ' + error);
+      }
+    })
+    .catch((error) => {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log("Firebase Error: " + error);
+    });
+});
+
+exports.getBusinessData = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let email = body.email;
+    db.collection('businesses').doc(email).get()
+   .then((data) => {
+        if(data.data()){
+            db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
+            response.json({ result: data.data() });
+        }
+        else {
+            response.json({ result: {} });
+            functions.logger.log("Firebase Error: " + error);
+        }
+  })
+  .catch((error) => {
+    response.json({ result: 'failed', error: error });
+    functions.logger.log("Firebase Error: " + error);
+  });
+});
+
+exports.getFriends = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let email = body.email;
+    let friendsArr = [];
+    var path = new admin.firestore.FieldPath('friends', email);
+    let docRef = db.collection('users').where(path, '==', true);
+    docRef.get().then((friends) => {
+        friends.forEach(function(friend) {
+            if(friend && friend.data()) {
+                friendsArr.push(friend.data());
+            }
+        });
+        response.json({ result: friendsArr });
+    })
+    .catch((error) => {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log("Firebase Error: " + error);
+    });
+})
+
+exports.getBusinessByUserFav = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let favArr = body.favArr;
+    let businessRef = db.collection('businesses');
+    var businesses = []
+    businessRef.where('businessId', 'in', favArr).get()
+    .then((data)=>{
+        data.forEach((business)=>{
+            if(business && business.data()){
+                businesses.push(business.data())
+            }
+        })
+        response.json({ result: businesses });
+    })
+    .catch((error) => {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log("Firebase Error: " + error);
+    });
+})
+
+exports.filterFriends = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let userFriends = body.userFriends;
+    let usersThatRequested = body.usersThatRequested;
+    let obj = {
+        requests: [],
+        acceptedFriends: []
+    }
+    if(userFriends){
+        let keys = Object.keys(userFriends);
+        keys.forEach(function(key){
+            if(userFriends[key] == null){
+            usersThatRequested.forEach((user)=>{
+                if(key == user.email){
+                obj.requests.push(user);
+                }
+            });
+            }
+            if(userFriends[key] == true){
+            usersThatRequested.forEach((user)=>{
+                if(key == user.email){
+                obj.acceptedFriends.push(user);
+                }
+            });
+            }
+        });
+    }
+    response.json({ result: obj });
+})
