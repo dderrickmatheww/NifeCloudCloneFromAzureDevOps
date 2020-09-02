@@ -199,21 +199,30 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
         else {
             if(user != undefined || user != null) {
                 let userObj = {};
-                userObj['displayName'] = obj.displayName;
-                userObj['email'] = obj.email;
-                userObj['phoneNumber'] = obj.phoneNumber;
-                userObj['photoSource'] = obj.photoURL;
-                userObj['providerId'] = obj.providerId;
-                userObj['uid'] = obj.uid;
+                userObj['displayName'] = user.displayName;
+                userObj['email'] = user.email;
+                userObj['phoneNumber'] = user.phoneNumber;
+                userObj['photoSource'] = user.photoURL;
+                userObj['providerId'] = user.providerId ? user.providerId : "";
+                userObj['uid'] = user.uid;
                 userObj['providerData'] = {
-                    displayName : obj.displayName,
-                    email : obj.email,
-                    phoneNumber : obj.phoneNumber,
-                    photoSource : obj.photoURL,
-                    providerId : obj.providerId,
-                    uid : obj.uid,
+                    displayName : user.displayName,
+                    email : user.email,
+                    phoneNumber : user.phoneNumber,
+                    photoSource : user.photoURL,
+                    providerId : user.providerId ? user.providerId : "",
+                    uid : user.uid,
                 }
-                userObj['privacySettings'] = { public: true };
+                userObj['privacySettings'] = {
+                    DOBPrivacy:false,
+                    checkInPrivacy:false,
+                    favoritingPrivacy:false,
+                    genderPrivacy:false,
+                    orientationPrivacy:false,
+                    public:true,
+                    searchPrivacy:false,
+                    visitedPrivacy:false
+                 };
                 db.collection('users').doc(email).set(userObj, { merge: true });
                 response.json({ result: userObj });
                 functions.logger.log('verifyUser created a new user object.');
