@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const geolib = require('geolib');
+const { user } = require('firebase-functions/lib/providers/auth');
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
 const db = admin.firestore();;
@@ -72,7 +73,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                               latitude: userLat,
                               longitude: userLong
                           }, 
-                          32000
+                          32187
                       ); 
                   }
                 }
@@ -361,3 +362,62 @@ exports.filterFriends = functions.https.onRequest(async (request, response) => {
     }
     response.json({ result: obj });
 })
+
+// exports.onFavorite = functions.firestore.document('users/{email}')
+// .onWrite(async (change, context) => { 
+//     if(change.before.data().favoritePlaces && change.after.data().favoritePlaces != change.before.data().favoritePlaces) {
+//         //Setting DB and context variables
+//         let db = admin.firestore();
+//         let before = change.before.data().favoritePlaces; 
+//         let after = change.after.data().favoritePlaces;
+//         let beforeBarsIds = Object.keys(before);
+//         let afterBarsIds = Object.keys(after);
+//         //if favorited, add to bar tally
+//             //if favorited first time
+//             beforeBarsIds.forEach((beforeId)=>{
+//                 afterBarsIds.forEach((afterId)=>{
+//                     if(!before[afterId]){
+//                         UpdateTally(afterId);
+//                     }
+//                 });
+//             });
+//             //if favorited previously
+
+//         //if unfavorited, remove from bar tally
+//             //if unfavorited first time
+//             //if unfavorited previously
+        
+//     }
+//     else {
+//         functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
+//     }
+
+//     function UpdateTally(busId){
+//         let busRef = db.collection('businesses').where('')
+//         let userRef = db.collection('users');
+//         userFavPath =  new admin.firestore.FieldPath('favoritePlaces', busId);
+//         var tally = 0;
+//         userRef.where(userFavPath, '==', true).get()
+//         .then((data)=>{
+//             if(data){
+//                 tally = data.length;
+//                 busRef.where()
+//             } else {
+                
+//             }
+//         })
+//     }
+// });
+
+// exports.friendRequestNotification = functions.firestore.document('users/{email}')
+// .onWrite(async (change, context) => { 
+//     if(change.before.data().friends && change.after.data().friends != change.before.data().friends) {
+//         //Setting DB and context variables
+//         let db = admin.firestore();
+        
+//     }
+//     else {
+//         functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
+//     }
+// });
+
