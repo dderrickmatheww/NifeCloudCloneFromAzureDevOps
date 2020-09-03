@@ -45,13 +45,13 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
         userRef.forEach(doc => {
             if(doc.data().checkIn && !doc.data().checkIn.address == "") {
                 var withinRadius = (checkIn, userLocation, boolean) => {
-                  let withinRadius;
+                  var isWithinRadius;
                   let checkInLat = parseInt(checkIn.latAndLong.split(',')[0]);
                   let checkInLong = parseInt(checkIn.latAndLong.split(',')[1]);
                   let userLat = parseInt(userLocation.coords.latitude);
                   let userLong = parseInt(userLocation.coords.longitude);
                   if(boolean) {
-                      return withinRadius = geolib.isPointWithinRadius(
+                    isWithinRadius = geolib.isPointWithinRadius(
                           {
                               latitude: checkInLat,
                               longitude: checkInLong
@@ -62,9 +62,10 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                           }, 
                           100
                       ); 
+                      return isWithinRadius;
                   }
                   else {
-                      return withinRadius = geolib.isPointWithinRadius(
+                    isWithinRadius = geolib.isPointWithinRadius(
                           {
                               latitude: checkInLat,
                               longitude: checkInLong
@@ -75,6 +76,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                           }, 
                           32187
                       ); 
+                      return isWithinRadius;
                   }
                 }
                 if(withinRadius(doc.data().checkIn, userLocation, false)) {
