@@ -110,6 +110,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
             });
             checkInArray.push(checkInCount);
         });
+        
         checkInArray.sort(function innerSort(a, b) {
           let key = "checkedIn";
           let order = "desc";
@@ -193,9 +194,8 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
     let user = body.user;
     let email = body.email;
-    db.collection('users').doc(email).get()
-    .then(async (data) => {
-        if(data.data()){
+    try {
+        if((await db.collection('users').doc(email).get()).exists){
             functions.logger.log('verifyUser found a existing user object.');
             response.json({ result: data.data() });
         }
@@ -231,11 +231,11 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                 functions.logger.log('verifyUser created a new user object.');
             }
         }
-    })
-    .catch((err) => {
+    }
+    catch(err) {
         response.json({ result: 'failed', error: err });
         functions.logger.log('verifyUser errored out with a Firebase Error: ' +  err);
-    })
+    }
 });
 
 exports.saveLocation = functions.https.onRequest(async (request, response) => {
@@ -257,63 +257,68 @@ exports.saveLocation = functions.https.onRequest(async (request, response) => {
 exports.getUserData = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
     let email = body.email;
-    db.collection('users').doc(email).get()
-    .then((data) => {
-      if(data.data()){
-        db.collection('users').doc(email)
-        .set({ lastLoginAt: new Date().toUTCString() }, { merge: true });
-        response.json({ result: data.data() });
-      }
-      else {
-        response.json({ result: {} });
-        functions.logger.log('No data found. Error: ' + error);
-      }
-    })
-    .catch((error) => {
-        response.json({ result: 'failed', error: error });
-        functions.logger.log("Firebase Error: " + error);
-    });
-});
-
-exports.getBusinessData = functions.https.onRequest(async (request, response) => {
-    let body = JSON.parse(request.body);
-    let email = body.email;
-    db.collection('businesses').doc(email).get()
-   .then((data) => {
-        if(data.data()){
-            db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
-            response.json({ result: data.data() });
+    let userRes = await db.collection('users').doc(email).get();
+    let userData = userRes.data();
+    if(userData) {
+        db.collection('users').doc(email).set({ lastLoginAt: new Date().toUTCString() }, { merge: true });
+        if(userData.isBusiness) {
+            let businessRes = await db.collection('businesses').doc(email).get();
+            let businessData = businessRes.data();
+            if(businessData){
+                db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
+                userData['businessData'] = businessData;
+                response.json({ result: userData });
+            }
+            else {
+                response.json({ result: {} });
+                functions.logger.log("Firebase Error: " + error);
+            }
         }
         else {
-            response.json({ result: {} });
-            functions.logger.log("Firebase Error: " + error);
-        }
-  })
-  .catch((error) => {
-    response.json({ result: 'failed', error: error });
-    functions.logger.log("Firebase Error: " + error);
-  });
-});
-
-exports.getFriends = functions.https.onRequest(async (request, response) => {
-    let body = JSON.parse(request.body);
-    let email = body.email;
-    let friendsArr = [];
-    var path = new admin.firestore.FieldPath('friends', email);
-    let docRef = db.collection('users').where(path, '==', true);
-    docRef.get().then((friends) => {
-        friends.forEach(function(friend) {
-            if(friend && friend.data()) {
-                friendsArr.push(friend.data());
+            var path = new admin.firestore.FieldPath('friends', email);
+            let docRef = db.collection('users').where(path, '==', true);
+            let friends = await docRef.get();
+            let obj = {
+                requests: [],
+                acceptedFriends: [],
+                friendsArr: [],
+                userFriends: userData.friends
             }
-        });
-        response.json({ result: friendsArr });
-    })
-    .catch((error) => {
-        response.json({ result: 'failed', error: error });
-        functions.logger.log("Firebase Error: " + error);
-    });
-})
+
+            friends.forEach((friend) => {
+                if(friend && friend.data()) {
+                    obj.friendsArr.push(friend.data());
+                }
+            });
+
+            if(obj.userFriends) {
+                let keys = Object.keys(obj.userFriends);
+                keys.forEach((key) => {
+                    if(obj.userFriends[key] == null){
+                        obj.friendsArr.forEach((user) => {
+                            if(key == user.email){
+                                obj.requests.push(user);
+                            }
+                        });
+                    }
+                    if(obj.userFriends[key] == true){
+                        obj.friendsArr.forEach((user) => {
+                            if(key == user.email){
+                                obj.acceptedFriends.push(user);
+                            }
+                        });
+                    }
+                });
+            }
+            userData['friendData'] = obj;
+            response.json({ result: userData });
+        }
+    }
+    else {
+        response.json({ result: {} });
+        functions.logger.log('No data found. Error: ' + error);
+    }
+});
 
 exports.getBusinessByUserFav = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
@@ -334,92 +339,3 @@ exports.getBusinessByUserFav = functions.https.onRequest(async (request, respons
         functions.logger.log("Firebase Error: " + error);
     });
 })
-
-exports.filterFriends = functions.https.onRequest(async (request, response) => {
-    let body = JSON.parse(request.body);
-    let userFriends = body.userFriends;
-    let usersThatRequested = body.usersThatRequested;
-    let obj = {
-        requests: [],
-        acceptedFriends: []
-    }
-    if(userFriends){
-        let keys = Object.keys(userFriends);
-        keys.forEach(function(key){
-            if(userFriends[key] == null){
-            usersThatRequested.forEach((user)=>{
-                if(key == user.email){
-                obj.requests.push(user);
-                }
-            });
-            }
-            if(userFriends[key] == true){
-            usersThatRequested.forEach((user)=>{
-                if(key == user.email){
-                obj.acceptedFriends.push(user);
-                }
-            });
-            }
-        });
-    }
-    response.json({ result: obj });
-})
-
-// exports.onFavorite = functions.firestore.document('users/{email}')
-// .onWrite(async (change, context) => { 
-//     if(change.before.data().favoritePlaces && change.after.data().favoritePlaces != change.before.data().favoritePlaces) {
-//         //Setting DB and context variables
-//         let db = admin.firestore();
-//         let before = change.before.data().favoritePlaces; 
-//         let after = change.after.data().favoritePlaces;
-//         let beforeBarsIds = Object.keys(before);
-//         let afterBarsIds = Object.keys(after);
-//         //if favorited, add to bar tally
-//             //if favorited first time
-//             beforeBarsIds.forEach((beforeId)=>{
-//                 afterBarsIds.forEach((afterId)=>{
-//                     if(!before[afterId]){
-//                         UpdateTally(afterId);
-//                     }
-//                 });
-//             });
-//             //if favorited previously
-
-//         //if unfavorited, remove from bar tally
-//             //if unfavorited first time
-//             //if unfavorited previously
-        
-//     }
-//     else {
-//         functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
-//     }
-
-//     function UpdateTally(busId){
-//         let busRef = db.collection('businesses').where('')
-//         let userRef = db.collection('users');
-//         userFavPath =  new admin.firestore.FieldPath('favoritePlaces', busId);
-//         var tally = 0;
-//         userRef.where(userFavPath, '==', true).get()
-//         .then((data)=>{
-//             if(data){
-//                 tally = data.length;
-//                 busRef.where()
-//             } else {
-                
-//             }
-//         })
-//     }
-// });
-
-// exports.friendRequestNotification = functions.firestore.document('users/{email}')
-// .onWrite(async (change, context) => { 
-//     if(change.before.data().friends && change.after.data().friends != change.before.data().friends) {
-//         //Setting DB and context variables
-//         let db = admin.firestore();
-        
-//     }
-//     else {
-//         functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
-//     }
-// });
-
