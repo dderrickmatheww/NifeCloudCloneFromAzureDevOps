@@ -345,23 +345,25 @@ exports.sendVerificationEmail = functions.https.onRequest(async (request, respon
     let body = JSON.parse(request.body);
     let email = body.email;
     let img = body.image;
-    let mail = db.collection('mail');
-    let messageObj = {}
-    messageObj[email] = {
+    let uid = Math.random().toString(36).replace(/[^a-z]+/g, '')
+    let mail = db.collection('mail').doc(uid);
+    let html = '<h3> User/Business Email: '+email+'</h3></br>';
+    html +='<h3> User Data Link: <a href="https://console.firebase.google.com/u/0/project/nife-75d60/firestore/data~2Fbusinesses~2F'+email+'"> User Data</a></h3></br>';
+    html +='<h3> Business Data Link: <a href="https://console.firebase.google.com/u/0/project/nife-75d60/firestore/data~2Fusers~2F'+email+'"> Business Data</a></h3></br>';
+    html +='<h3> Proof Image: </h3></br><img src="'+img+'" />'
+    let messageObj =  {
         message:{
             subject:'' + email + " Proof of Address",
-            html:'<h3>'+email+' Proofs</h3></br>'+'<img src="'+img+'" />',
+            html: html,
             text:'Proof link: '+ img,
-            bcc:["admin@nife.app", "dev@nife.app"]
+            
         },
-        to:"dev@nife.app"
+        to:"dev@nife.app", 
+        bcc:["admin@nife.app"]
     }
     mail.set(messageObj, {merge:true})
     .then(() => {
         response.json({ result: "success" });
-    })
-    .catch((error) => {
-        response.json({ result: 'failed', error: error });
-        functions.logger.log("Firebase Error: " + error);
     });
 })
+
