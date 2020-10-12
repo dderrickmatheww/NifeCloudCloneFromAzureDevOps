@@ -339,3 +339,29 @@ exports.getBusinessByUserFav = functions.https.onRequest(async (request, respons
         functions.logger.log("Firebase Error: " + error);
     });
 })
+
+
+exports.sendVerificationEmail = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let email = body.email;
+    let img = body.image;
+    let mail = db.collection('mail');
+    let messageObj = {}
+    messageObj[email] = {
+        message:{
+            subject:'' + email + " Proof of Address",
+            html:'<h3>'+email+' Proofs</h3></br>'+'<img src="'+img+'" />',
+            text:'Proof link: '+ img,
+            bcc:["admin@nife.app", "dev@nife.app"]
+        },
+        to:"dev@nife.app"
+    }
+    mail.set(messageObj, {merge:true})
+    .then(() => {
+        response.json({ result: "success" });
+    })
+    .catch((error) => {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log("Firebase Error: " + error);
+    });
+})
