@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const geolib = require('geolib');
 const { user } = require('firebase-functions/lib/providers/auth');
+const XMLHttpRequest = require("xhr2");
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
 const db = admin.firestore();;
@@ -15,20 +16,19 @@ const db = admin.firestore();;
 //
 // Search terms:
 //
-//              Search "User Related" to find:
+//              User Related
 //                  - VerifyUser();
 //                  - GetUserData();
 //
 //              Buisness Related
 //                  - getBusinessByUserFav();
+//                  - sendVerificationEmail();
 //                  
 //              Location Related 
 //                  - checkInCount();
 //                  - checkInTTL();
 //                  - saveLocation();
 //
-//              Upload Image
-//                  - UploadImage();
 //
 //******************************************************************************** */
 //******************************************************************************** */
@@ -396,45 +396,13 @@ exports.sendVerificationEmail = functions.https.onRequest(async (request, respon
         to:"dev@nife.app", 
         bcc:["admin@nife.app"]
     }
-    mail.set(messageObj, {merge:true})
+    mail.set(messageObj, { merge: true })
     .then(() => {
         response.json({ result: "success" });
+    })
+    .catch((e) => {
+        functions.logger.log('sendVerificationEmail "mail.set" function failed. Error Message: ' + e.message);
     });
 })
 
-//************* */
-// Upload Image
-//************* */
-
-exports.UploadImage = functions.https.onRequest(async (request, response) => { 
-    let body = JSON.parse(request.body);
-    let uri = body.uri;
-    let email = body.email;
-    let isProof = body.isProof;
-
-    const blob = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onload = function() {
-          resolve(xhr.response);
-        };
-        xhr.onerror = function(e) {
-          console.log(e);
-          reject(new TypeError('Network request failed'));
-        };
-        xhr.responseType = 'blob';
-        xhr.open('GET', uri, true);
-        xhr.send(null);
-    });
-    
-    const ref = db
-    .storage()
-    .ref()
-    .child(!isProof ? email : email);
-    const snapshot = await ref.put(blob);
-    
-    // We're done with the blob, close and release it
-    blob.close();
-    let image = await snapshot.ref.getDownloadURL();
-    response.json({ result: image });
-});
 
