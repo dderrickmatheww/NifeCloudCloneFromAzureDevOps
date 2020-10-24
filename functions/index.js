@@ -8,7 +8,35 @@ const db = admin.firestore();;
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
+
+//******************************************************************************** */
+//******************************************************************************** */
+// Ctr+f to find functions
 //
+// Search terms:
+//
+//              Search "User Related" to find:
+//                  - VerifyUser();
+//                  - GetUserData();
+//
+//              Buisness Related
+//                  - getBusinessByUserFav();
+//                  
+//              Location Related 
+//                  - checkInCount();
+//                  - checkInTTL();
+//                  - saveLocation();
+//
+//              Upload Image
+//                  - UploadImage();
+//
+//******************************************************************************** */
+//******************************************************************************** */
+
+//**************** */
+//Location Related
+//**************** */
+
 exports.checkInCount = functions.https.onRequest(async (request, response) => {
   let body = JSON.parse(request.body);
   let buisnessUID = body.buisnessUID;
@@ -188,54 +216,6 @@ exports.checkInTTL = functions.firestore.document('users/{email}')
     }
 });
 
-exports.verifyUser = functions.https.onRequest(async (request, response) => { 
-    let body = JSON.parse(request.body);
-    let user = body.user;
-    let email = body.email;
-    try {
-        if((await db.collection('users').doc(email).get()).exists){
-            functions.logger.log('verifyUser found a existing user object.');
-            response.json({ result: data.data() });
-        }
-        else {
-            if(user != undefined || user != null) {
-                let userObj = {};
-                userObj['displayName'] = user.displayName;
-                userObj['email'] = user.email;
-                userObj['phoneNumber'] = user.phoneNumber;
-                userObj['photoSource'] = user.photoURL;
-                userObj['providerId'] = user.providerId ? user.providerId : "";
-                userObj['uid'] = user.uid;
-                userObj['providerData'] = {
-                    displayName : user.displayName,
-                    email : user.email,
-                    phoneNumber : user.phoneNumber,
-                    photoSource : user.photoURL,
-                    providerId : user.providerId ? user.providerId : "",
-                    uid : user.uid,
-                }
-                userObj['privacySettings'] = {
-                    DOBPrivacy:false,
-                    checkInPrivacy:false,
-                    favoritingPrivacy:false,
-                    genderPrivacy:false,
-                    orientationPrivacy:false,
-                    public:true,
-                    searchPrivacy:false,
-                    visitedPrivacy:false
-                 };
-                db.collection('users').doc(email).set(userObj, { merge: true });
-                response.json({ result: userObj });
-                functions.logger.log('verifyUser created a new user object.');
-            }
-        }
-    }
-    catch(err) {
-        response.json({ result: 'failed', error: err });
-        functions.logger.log('verifyUser errored out with a Firebase Error: ' +  err);
-    }
-});
-
 exports.saveLocation = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
     let email = body.email;
@@ -251,6 +231,10 @@ exports.saveLocation = functions.https.onRequest(async (request, response) => {
         functions.logger.log('saveLocation errored out with a Firebase Error: ' +  error);
     });
 });
+
+//************ */
+//User Related
+//************ */
 
 exports.getUserData = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
@@ -318,6 +302,58 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
     }
 });
 
+exports.verifyUser = functions.https.onRequest(async (request, response) => { 
+    let body = JSON.parse(request.body);
+    let user = body.user;
+    let email = body.email;
+    try {
+        if((await db.collection('users').doc(email).get()).exists){
+            functions.logger.log('verifyUser found a existing user object.');
+            response.json({ result: data.data() });
+        }
+        else {
+            if(user != undefined || user != null) {
+                let userObj = {};
+                userObj['displayName'] = user.displayName;
+                userObj['email'] = user.email;
+                userObj['phoneNumber'] = user.phoneNumber;
+                userObj['photoSource'] = user.photoURL;
+                userObj['providerId'] = user.providerId ? user.providerId : "";
+                userObj['uid'] = user.uid;
+                userObj['providerData'] = {
+                    displayName : user.displayName,
+                    email : user.email,
+                    phoneNumber : user.phoneNumber,
+                    photoSource : user.photoURL,
+                    providerId : user.providerId ? user.providerId : "",
+                    uid : user.uid,
+                }
+                userObj['privacySettings'] = {
+                    DOBPrivacy:false,
+                    checkInPrivacy:false,
+                    favoritingPrivacy:false,
+                    genderPrivacy:false,
+                    orientationPrivacy:false,
+                    public:true,
+                    searchPrivacy:false,
+                    visitedPrivacy:false
+                 };
+                db.collection('users').doc(email).set(userObj, { merge: true });
+                response.json({ result: userObj });
+                functions.logger.log('verifyUser created a new user object.');
+            }
+        }
+    }
+    catch(err) {
+        response.json({ result: 'failed', error: err });
+        functions.logger.log('verifyUser errored out with a Firebase Error: ' +  err);
+    }
+});
+
+//**************** */
+//Buisness Related
+//**************** */
+
 exports.getBusinessByUserFav = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
     let favArr = body.favArr;
@@ -336,4 +372,40 @@ exports.getBusinessByUserFav = functions.https.onRequest(async (request, respons
         response.json({ result: 'failed', error: error });
         functions.logger.log("Firebase Error: " + error);
     });
-})
+});
+
+//************* */
+// Upload Image
+//************* */
+
+exports.UploadImage = functions.https.onRequest(async (request, response) => { 
+    let body = JSON.parse(request.body);
+    let uri = body.uri;
+    let email = body.email;
+    let isProof = body.isProof;
+
+    const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function() {
+          resolve(xhr.response);
+        };
+        xhr.onerror = function(e) {
+          console.log(e);
+          reject(new TypeError('Network request failed'));
+        };
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+    });
+    
+    const ref = db
+    .storage()
+    .ref()
+    .child(!isProof ? email : email);
+    const snapshot = await ref.put(blob);
+    
+    // We're done with the blob, close and release it
+    blob.close();
+    let image = await snapshot.ref.getDownloadURL();
+    response.json({ result: image });
+});
