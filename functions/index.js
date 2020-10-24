@@ -73,13 +73,13 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
         userRef.forEach(doc => {
             if(doc.data().checkIn && !doc.data().checkIn.address == "") {
                 var withinRadius = (checkIn, userLocation, boolean) => {
-                  let withinRadius;
+                  var isWithinRadius;
                   let checkInLat = parseInt(checkIn.latAndLong.split(',')[0]);
                   let checkInLong = parseInt(checkIn.latAndLong.split(',')[1]);
                   let userLat = parseInt(userLocation.coords.latitude);
                   let userLong = parseInt(userLocation.coords.longitude);
                   if(boolean) {
-                      return withinRadius = geolib.isPointWithinRadius(
+                    isWithinRadius = geolib.isPointWithinRadius(
                           {
                               latitude: checkInLat,
                               longitude: checkInLong
@@ -90,9 +90,10 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                           }, 
                           100
                       ); 
+                      return isWithinRadius;
                   }
                   else {
-                      return withinRadius = geolib.isPointWithinRadius(
+                    isWithinRadius = geolib.isPointWithinRadius(
                           {
                               latitude: checkInLat,
                               longitude: checkInLong
@@ -103,6 +104,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                           }, 
                           32187
                       ); 
+                      return isWithinRadius;
                   }
                 }
                 if(withinRadius(doc.data().checkIn, userLocation, false)) {
@@ -374,6 +376,32 @@ exports.getBusinessByUserFav = functions.https.onRequest(async (request, respons
     });
 });
 
+exports.sendVerificationEmail = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let email = body.email;
+    let img = body.image;
+    let uid = Math.random().toString(36).replace(/[^a-z]+/g, '')
+    let mail = db.collection('mail').doc(uid);
+    let html = '<h3> User/Business Email: '+email+'</h3></br>';
+    html +='<h3> User Data Link: <a href="https://console.firebase.google.com/u/0/project/nife-75d60/firestore/data~2Fbusinesses~2F'+email+'"> User Data</a></h3></br>';
+    html +='<h3> Business Data Link: <a href="https://console.firebase.google.com/u/0/project/nife-75d60/firestore/data~2Fusers~2F'+email+'"> Business Data</a></h3></br>';
+    html +='<h3> Proof Image: </h3></br><img src="'+img+'" />'
+    let messageObj =  {
+        message:{
+            subject:'' + email + " Proof of Address",
+            html: html,
+            text:'Proof link: '+ img,
+            
+        },
+        to:"dev@nife.app", 
+        bcc:["admin@nife.app"]
+    }
+    mail.set(messageObj, {merge:true})
+    .then(() => {
+        response.json({ result: "success" });
+    });
+})
+
 //************* */
 // Upload Image
 //************* */
@@ -409,3 +437,4 @@ exports.UploadImage = functions.https.onRequest(async (request, response) => {
     let image = await snapshot.ref.getDownloadURL();
     response.json({ result: image });
 });
+
