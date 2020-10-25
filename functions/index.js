@@ -2,7 +2,6 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const geolib = require('geolib');
 const { user } = require('firebase-functions/lib/providers/auth');
-const XMLHttpRequest = require("xhr2");
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
 const db = admin.firestore();;
@@ -26,7 +25,7 @@ const db = admin.firestore();;
 //                  
 //              Location Related 
 //                  - checkInCount();
-//                  - checkInTTL();
+//                  - TTL();
 //                  - saveLocation();
 //
 //
@@ -169,50 +168,50 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
 
 exports.TTL =  functions.pubsub.schedule('every 1 hours').onRun(async () => {
     let DeletedObj = {};
-    let DeletedArray = []
+    let DeletedOpts = {};
     await db.collection('users').get()
     .then(async querySnapshot => {
+        //Grabs all users
         querySnapshot.docs.map(async doc => {
-            let updated;
-            let wasUpdatedArray = [];
             if (doc.data().lastVisited) {
+                let updated1 = false;
                 for (var prop in doc.data().lastVisited) {
                     let currentVisitedDateCheck = ((new Date().getTime() - (parseInt(doc.data().lastVisited[prop].checkInTime._seconds ? doc.data().lastVisited[prop].checkInTime._seconds : doc.data().lastVisited[prop].checkInTime.seconds) * 1000)) > (86400000 * 7))
+                    //Checking lastVisited object for outdataed data. (x > 7 days)
                     if(currentVisitedDateCheck) {
                         await doc.ref.update({
                             ['lastVisited.' + prop]: FieldValue.delete()
                         });
-                        updated = true;
+                        updated1 = true;
                     }
                 }
-                if (updated) {
-                    wasUpdatedArray.push('lastVisited');
-                }
+                DeletedOpts['lastVisited'] = updated1;
             }
             if (doc.data().checkIn) {
+                let updated2 = false;
                 let checkInDateCheck = ((new Date().getTime() - (parseInt(doc.data().checkIn.checkInTime._seconds ? doc.data().checkIn.checkInTime._seconds : doc.data().checkIn.checkInTime.seconds) * 1000)) > 86400000);
-                //Checking currentCheckedIn object for outdated data
+                //Checking checkedIn object for outdated data. (x > 1 days)
                 if(checkInDateCheck) {
                     await doc.ref.update({
                         checkIn: FieldValue.delete()
                     });
-                    updated = true;
-                    wasUpdatedArray.push('checkIn');
+                    updated2 = true;
                 }
+                DeletedOpts['checkIn'] = updated2;
             }
-            if (updated == true) {
-                DeletedObj = {
-                    user: doc.email,
-                    timeUpdated: new Date(),
-                    wasUpdated: DeletedArray
-                }
-            }
-            else {
-                DeletedObj = "No users were updated!"
+            DeletedObj = {
+                user: doc.email,
+                timeUpdated: new Date(),
+                wasUpdated: DeletedOpts
             }
         });
+
+        functions.logger.log(JSON.stringify(DeletedObj));
+    })
+    .catch((error) => {
+        functions.logger.log('TTL errored out with a Firebase Error: ' +  error.message);
+        functions.logger.log(JSON.stringify(DeletedObj));
     });
-    functions.logger.log(JSON.stringify(DeletedObj));
 });
 
 exports.saveLocation = functions.https.onRequest(async (request, response) => {
@@ -226,8 +225,8 @@ exports.saveLocation = functions.https.onRequest(async (request, response) => {
         functions.logger.log('saveLocation saved the location to the user object.');
     })
     .catch((error) => {
-        response.json({ result: 'failed', error: error });
-        functions.logger.log('saveLocation errored out with a Firebase Error: ' +  error);
+        response.json({ result: 'failed', error: error.message });
+        functions.logger.log('saveLocation errored out with a Firebase Error: ' +  error.message);
     });
 });
 
@@ -238,69 +237,74 @@ exports.saveLocation = functions.https.onRequest(async (request, response) => {
 exports.getUserData = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
     let email = body.email;
-    let userRes = await db.collection('users').doc(email).get();
-    let userData = userRes.data();
-    if(userData) {
-        db.collection('users').doc(email).set({ lastLoginAt: new Date().toUTCString() }, { merge: true });
-        if(userData.isBusiness) {
-            let businessRes = await db.collection('businesses').doc(email).get();
-            let businessData = businessRes.data();
+    try {
+        let userRes = await db.collection('users').doc(email).get();
+        let userData = userRes.data();
+        if(userData) {
+            db.collection('users').doc(email).set({ lastLoginAt: new Date().toUTCString() }, { merge: true });
+            if(userData.isBusiness) {
+                let businessRes = await db.collection('businesses').doc(email).get();
+                let businessData = businessRes.data();
 
-            if(businessData){
-                db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
-                userData['businessData'] = businessData;
-                response.json({ result: userData });
+                if(businessData){
+                    db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
+                    userData['businessData'] = businessData;
+                    response.json({ result: userData });
+                }
+                else {
+                    response.json({ result: 'failed', error: 'No value for variable "buisnessData" (Typ. Object) found!' });
+                    functions.logger.log('No value for variable "buisnessData" (Typ. Object) found!');
+                }
             }
             else {
-                response.json({ result: {} });
-                functions.logger.log("Firebase Error: " + error);
+                var path = new admin.firestore.FieldPath('friends', email);
+                let docRef = await db.collection('users').where(path, '==', true);
+                let friends = await docRef.get();
+                let obj = {
+                    requests: [],
+                    acceptedFriends: [],
+                    friendsArr: [],
+                    userFriends: userData.friends ? userData.friends : {}
+                };
+
+                if(typeof friends !== 'undefined' && friends.length > 0) {
+                    friends.forEach((friend) => {
+                        if(friend && friend.data()) {
+                            obj.friendsArr.push(friend.data());
+                        }
+                    });
+                }
+
+                let keys = Object.keys(obj.userFriends);
+                if(keys.length > 0) {
+                    keys.forEach( (key) => {
+                        if (obj.userFriends[key] == null) {
+                            obj.friendsArr.forEach((user) => {
+                                if (key == user.email) {
+                                    obj.requests.push(user);
+                                }
+                            });
+                        }
+                        if (obj.userFriends[key] == true) {
+                            obj.friendsArr.forEach((user) => {
+                                if (key == user.email) {
+                                    obj.acceptedFriends.push(user);
+                                }
+                            });
+                        }
+                    });
+                }
+                userData['friendData'] = obj;
+                response.json({ result: userData });
             }
         }
         else {
-            var path = new admin.firestore.FieldPath('friends', email);
-            let docRef = await db.collection('users').where(path, '==', true);
-            let friends = await docRef.get();
-            let obj = {
-                requests: [],
-                acceptedFriends: [],
-                friendsArr: [],
-                userFriends: userData.friends ? userData.friends : []
-            }
-
-            if(typeof friends !== 'undefined' && friends.length > 0) {
-                friends.forEach((friend) => {
-                    if(friend && friend.data()) {
-                        obj.friendsArr.push(friend.data());
-                    }
-                });
-            }
-
-            if(obj.userFriends.length > 0) {
-                let keys = Object.keys(obj.userFriends);
-                keys.forEach((key) => {
-                    if(obj.userFriends[key] == null){
-                        obj.friendsArr.forEach((user) => {
-                            if(key == user.email){
-                                obj.requests.push(user);
-                            }
-                        });
-                    }
-                    if(obj.userFriends[key] == true){
-                        obj.friendsArr.forEach((user) => {
-                            if(key == user.email){
-                                obj.acceptedFriends.push(user);
-                            }
-                        });
-                    }
-                });
-            }
-
-            userData['friendData'] = obj;
-            response.json({ result: userData });
+            response.json({ result: 'failed', error: 'No value for variable "userData" (Typ. Object) found!' });
+            functions.logger.log('No value for variable "userData" (Typ. Object) found!');
         }
     }
-    else {
-        response.json({ result: {} });
+    catch(error) {
+        response.json({ result: 'failed', error: error });
         functions.logger.log('No data found. Error: ' + error);
     }
 });
@@ -310,9 +314,10 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
     let user = body.user;
     let email = body.email;
     try {
-        if((await db.collection('users').doc(email).get()).exists){
-            functions.logger.log('verifyUser found a existing user object.');
-            response.json({ result: data.data() });
+        let userData = await db.collection('users').doc(email).get();
+        if(userData.exists){
+            functions.logger.log('verifyUser() found an existing user object.');
+            response.json({ result: userData.data() });
         }
         else {
             if(user != undefined || user != null) {
@@ -347,9 +352,9 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
             }
         }
     }
-    catch(err) {
-        response.json({ result: 'failed', error: err });
-        functions.logger.log('verifyUser errored out with a Firebase Error: ' +  err);
+    catch(error) {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log('verifyUser errored out with a Firebase Error: ' +  error);
     }
 });
 
@@ -372,8 +377,8 @@ exports.getBusinessByUserFav = functions.https.onRequest(async (request, respons
         response.json({ result: businesses });
     })
     .catch((error) => {
-        response.json({ result: 'failed', error: error });
-        functions.logger.log("Firebase Error: " + error);
+        response.json({ result: 'failed', error: error.message });
+        functions.logger.log("Firebase Error: " + error.message);
     });
 });
 
@@ -401,8 +406,8 @@ exports.sendVerificationEmail = functions.https.onRequest(async (request, respon
     .then(() => {
         response.json({ result: "success" });
     })
-    .catch((e) => {
-        functions.logger.log('sendVerificationEmail "mail.set" function failed. Error Message: ' + e.message);
+    .catch((error) => {
+        functions.logger.log('sendVerificationEmail "mail.set" function failed. Error Message: ' + error.message);
     });
 })
 
