@@ -245,7 +245,7 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
         if(userData.isBusiness) {
             let businessRes = await db.collection('businesses').doc(email).get();
             let businessData = businessRes.data();
-            
+
             if(businessData){
                 db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
                 userData['businessData'] = businessData;
@@ -258,7 +258,7 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
         }
         else {
             var path = new admin.firestore.FieldPath('friends', email);
-            let docRef = db.collection('users').where(path, '==', true);
+            let docRef = await db.collection('users').where(path, '==', true);
             let friends = await docRef.get();
             let obj = {
                 requests: [],
