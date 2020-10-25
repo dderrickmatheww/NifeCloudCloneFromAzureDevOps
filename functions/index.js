@@ -167,55 +167,52 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
   }
 });
 
-exports.checkInTTL = functions.firestore.document('users/{email}')
-.onWrite(async (change, context) => { 
-    if(change.before.data().checkIn && change.after.data().checkIn != change.before.data().checkIn) {
-        //Setting DB and context variables
-        let db = admin.firestore();
-        let email = context.params.email;
-        //Grabbing specific properties from user object
-        let currentVisited = change.before.data().lastVisited;
-        let currentCheckedIn = change.before.data().checkIn;
-        //Setting reference
-        let userRef = db.collection('users').doc(email);
-        //Setting log object for Cloud Functions logs
-        let deletedObj = {};
-        deletedObj['lastVisited'];
-        deletedObj['checkIn'];
-        //Checking currentVisited object for outdated data
-        for(var prop in currentVisited) {
-            if(currentVisited && currentVisited.checkInTime) {
-                let currentVisitedDateCheck = (new Date().getTime() - parseInt(currentVisited[prop].checkInTime._seconds) > 86400)
-                if(currentVisitedDateCheck) {
-                    await userRef.update({
-                        ['lastVisited.' + prop]: FieldValue.delete()
-                    });
-                    deletedObj.lastVisited[prop];
+exports.TTL =  functions.pubsub.schedule('every 1 hours').onRun(async () => {
+    let DeletedObj = {};
+    let DeletedArray = []
+    await db.collection('users').get()
+    .then(async querySnapshot => {
+        querySnapshot.docs.map(async doc => {
+            let updated;
+            let wasUpdatedArray = [];
+            if (doc.data().lastVisited) {
+                for (var prop in doc.data().lastVisited) {
+                    let currentVisitedDateCheck = ((new Date().getTime() - (parseInt(doc.data().lastVisited[prop].checkInTime._seconds ? doc.data().lastVisited[prop].checkInTime._seconds : doc.data().lastVisited[prop].checkInTime.seconds) * 1000)) > (86400000 * 7))
+                    if(currentVisitedDateCheck) {
+                        await doc.ref.update({
+                            ['lastVisited.' + prop]: FieldValue.delete()
+                        });
+                        updated = true;
+                    }
+                }
+                if (updated) {
+                    wasUpdatedArray.push('lastVisited');
                 }
             }
-        }
-        if(currentCheckedIn && currentCheckedIn.checkInTime) {
-            let checkInDateCheck = (new Date().getTime() - parseInt(currentCheckedIn.checkInTime._seconds) > 86400)
-            //Checking currentCheckedIn object for outdated data
-            if(checkInDateCheck) {
-                await userRef.update({
-                    checkIn: FieldValue.delete()
-                });
-                deletedObj.checkIn = {
-                    updated: true
+            if (doc.data().checkIn) {
+                let checkInDateCheck = ((new Date().getTime() - (parseInt(doc.data().checkIn.checkInTime._seconds ? doc.data().checkIn.checkInTime._seconds : doc.data().checkIn.checkInTime.seconds) * 1000)) > 86400000);
+                //Checking currentCheckedIn object for outdated data
+                if(checkInDateCheck) {
+                    await doc.ref.update({
+                        checkIn: FieldValue.delete()
+                    });
+                    updated = true;
+                    wasUpdatedArray.push('checkIn');
+                }
+            }
+            if (updated == true) {
+                DeletedObj = {
+                    user: doc.email,
+                    timeUpdated: new Date(),
+                    wasUpdated: DeletedArray
                 }
             }
             else {
-                deletedObj.checkIn = {
-                    updated: false
-                }
+                DeletedObj = "No users were updated!"
             }
-        }
-        functions.logger.log("lastVisitedTTL has deleted buisnessUID: " + deletedObj);
-    }
-    else {
-        functions.logger.log("checkIn property of the user object, was not changed. TTL check was not ran.");
-    }
+        });
+    });
+    functions.logger.log(JSON.stringify(DeletedObj));
 });
 
 exports.saveLocation = functions.https.onRequest(async (request, response) => {
@@ -248,6 +245,7 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
         if(userData.isBusiness) {
             let businessRes = await db.collection('businesses').doc(email).get();
             let businessData = businessRes.data();
+            
             if(businessData){
                 db.collection('businesses').doc(email).set({lastLoginAt: new Date().toUTCString()}, { merge: true});
                 userData['businessData'] = businessData;
@@ -266,16 +264,18 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                 requests: [],
                 acceptedFriends: [],
                 friendsArr: [],
-                userFriends: userData.friends
+                userFriends: userData.friends ? userData.friends : []
             }
 
-            friends.forEach((friend) => {
-                if(friend && friend.data()) {
-                    obj.friendsArr.push(friend.data());
-                }
-            });
+            if(typeof friends !== 'undefined' && friends.length > 0) {
+                friends.forEach((friend) => {
+                    if(friend && friend.data()) {
+                        obj.friendsArr.push(friend.data());
+                    }
+                });
+            }
 
-            if(obj.userFriends) {
+            if(obj.userFriends.length > 0) {
                 let keys = Object.keys(obj.userFriends);
                 keys.forEach((key) => {
                     if(obj.userFriends[key] == null){
@@ -294,6 +294,7 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                     }
                 });
             }
+
             userData['friendData'] = obj;
             response.json({ result: userData });
         }
