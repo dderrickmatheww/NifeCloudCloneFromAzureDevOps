@@ -328,6 +328,7 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                 userObj['photoSource'] = user.photoURL;
                 userObj['providerId'] = user.providerId ? user.providerId : "";
                 userObj['uid'] = user.uid;
+                userObj['friends'] = {};
                 userObj['providerData'] = {
                     displayName : user.displayName,
                     email : user.email,
@@ -337,14 +338,14 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                     uid : user.uid,
                 }
                 userObj['privacySettings'] = {
-                    DOBPrivacy:false,
-                    checkInPrivacy:false,
-                    favoritingPrivacy:false,
-                    genderPrivacy:false,
-                    orientationPrivacy:false,
-                    public:true,
-                    searchPrivacy:false,
-                    visitedPrivacy:false
+                    DOBPrivacy: false,
+                    checkInPrivacy: false,
+                    favoritingPrivacy: false,
+                    genderPrivacy: false,
+                    orientationPrivacy: false,
+                    public: true,
+                    searchPrivacy: false,
+                    visitedPrivacy: false
                  };
                 db.collection('users').doc(email).set(userObj, { merge: true });
                 response.json({ result: userObj });
