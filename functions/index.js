@@ -265,28 +265,29 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                 };
                 var path = new admin.firestore.FieldPath('friends', email);
                 let docRef = db.collection('users').where(path, '==', true);
-                let friends = await docRef.get();
-                functions.logger.log(friends);
-                friends.forEach((friend) => {
-                    if(friend && friend.data()) {
-                        obj.friendsArr.push(friend.data());
-                    }
-                });
-                let keys = Object.keys(obj.userFriends);
-                keys.forEach(async (key) => {
-                    if (obj.userFriends[key] == null) {
-                        let friendData = await db.collection('users').doc(key).get();
-                        obj.requests.push(friendData.data());
-                    }
-                    if (obj.userFriends[key] == true) {
-                        let friendData = await db.collection('users').doc(key).get();
-                        obj.friendsArr.push(friendData.data());
-                        obj.acceptedFriends.push(friendData.data());
-                    }
-                });
-                userData['friendData'] = obj;
-                functions.logger.log(userData);
-                response.json({ result: userData });
+                docRef.get().then(friends =>{
+                    friends.forEach((friend) => {
+                        if(friend && friend.data()) {
+                            obj.friendsArr.push(friend.data());
+                        }
+                    });
+                    let keys = Object.keys(obj.userFriends);
+                    keys.forEach(async (key) => {
+                        obj.friendsArr.forEach(friend=>{
+                            if(friend.email == key){
+                                if(obj.userFriends[key] == null){
+                                    obj.requests.push(friend);
+                                } else if(obj.userFriends[key] == true){
+                                    obj.requests.push(friend);
+                                }
+                            }
+                        })
+                    });
+                    userData['friendData'] = obj;
+                    functions.logger.log(userData);
+                    response.json({ result: userData });
+                })
+                
             }
         }
         else {
