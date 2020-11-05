@@ -263,25 +263,30 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                     friendsArr: [],
                     userFriends: userData.friends
                 };
+                var path = new admin.firestore.FieldPath('friends', email);
+                let docRef = db.collection('users').where(path, '==', true);
+                let friends = await docRef.get();
+                functions.logger.log(friends);
+                friends.forEach((friend) => {
+                    if(friend && friend.data()) {
+                        obj.friendsArr.push(friend.data());
+                    }
+                });
                 let keys = Object.keys(obj.userFriends);
-                functions.logger.log(keys);
-                keys.forEach( async (key, index) => {
+                keys.forEach(async (key) => {
                     if (obj.userFriends[key] == null) {
                         let friendData = await db.collection('users').doc(key).get();
                         obj.requests.push(friendData.data());
                     }
                     if (obj.userFriends[key] == true) {
                         let friendData = await db.collection('users').doc(key).get();
-                        functions.logger.log(friendData.data());
                         obj.friendsArr.push(friendData.data());
                         obj.acceptedFriends.push(friendData.data());
                     }
-                    if(index == (keys.length - 1)) {
-                        userData['friendData'] = obj;
-                        functions.logger.log(userData);
-                        response.json({ result: userData });
-                    }
                 });
+                userData['friendData'] = obj;
+                functions.logger.log(userData);
+                response.json({ result: userData });
             }
         }
         else {
