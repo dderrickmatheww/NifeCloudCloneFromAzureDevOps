@@ -257,45 +257,31 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                 }
             }
             else {
-                var path = new admin.firestore.FieldPath('friends', email);
-                let docRef = await db.collection('users').where(path, '==', true);
-                let friends = await docRef.get();
                 let obj = {
                     requests: [],
                     acceptedFriends: [],
                     friendsArr: [],
-                    userFriends: userData.friends ? userData.friends : {}
+                    userFriends: userData.friends
                 };
-
-                if(typeof friends !== 'undefined' && friends.length > 0) {
-                    friends.forEach((friend) => {
-                        if(friend && friend.data()) {
-                            obj.friendsArr.push(friend.data());
-                        }
-                    });
-                }
-
                 let keys = Object.keys(obj.userFriends);
-                if(keys.length > 0) {
-                    keys.forEach( (key) => {
-                        if (obj.userFriends[key] == null) {
-                            obj.friendsArr.forEach((user) => {
-                                if (key == user.email) {
-                                    obj.requests.push(user);
-                                }
-                            });
-                        }
-                        if (obj.userFriends[key] == true) {
-                            obj.friendsArr.forEach((user) => {
-                                if (key == user.email) {
-                                    obj.acceptedFriends.push(user);
-                                }
-                            });
-                        }
-                    });
-                }
-                userData['friendData'] = obj;
-                response.json({ result: userData });
+                functions.logger.log(keys);
+                keys.forEach( async (key, index) => {
+                    if (obj.userFriends[key] == null) {
+                        let friendData = await db.collection('users').doc(key).get();
+                        obj.requests.push(friendData.data());
+                    }
+                    if (obj.userFriends[key] == true) {
+                        let friendData = await db.collection('users').doc(key).get();
+                        functions.logger.log(friendData.data());
+                        obj.friendsArr.push(friendData.data());
+                        obj.acceptedFriends.push(friendData.data());
+                    }
+                    if(index == (keys.length - 1)) {
+                        userData['friendData'] = obj;
+                        functions.logger.log(userData);
+                        response.json({ result: userData });
+                    }
+                });
             }
         }
         else {
