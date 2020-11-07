@@ -274,11 +274,12 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                     let keys = Object.keys(obj.userFriends);
                     keys.forEach(async (key) => {
                         obj.friendsArr.forEach(friend=>{
-                            if(friend.email == key){
+                            if(friend.email == key) {
                                 if(obj.userFriends[key] == null){
                                     obj.requests.push(friend);
-                                } else if(obj.userFriends[key] == true){
-                                    obj.requests.push(friend);
+                                } 
+                                else if(obj.userFriends[key] == true){
+                                    obj.acceptedFriends.push(friend);
                                 }
                             }
                         })
