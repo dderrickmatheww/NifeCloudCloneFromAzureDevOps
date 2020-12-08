@@ -2,9 +2,45 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const geolib = require('geolib');
 const { user } = require('firebase-functions/lib/providers/auth');
+const { object } = require('firebase-functions/lib/providers/storage');
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
-const db = admin.firestore();;
+const db = admin.firestore();
+
+//Current User Schema
+const userSchema = {
+    'displayName': '',
+     'email': '',
+    'phoneNumber': '',
+    'photoSource': '',
+    'providerId': '',
+    'uid': '',
+    'friends': {},
+    'gender': 'Unknown',
+    'dateOfBirth': 'Unknown',
+    'sexualOrientation': 'Unknown',
+    'bio': 'None',
+    'favoriteDrinks': [],
+    'favoritePlaces': {},
+    'providerData': {
+        'displayName' : '',
+        'email' : '',
+        'phoneNumber' : '',
+        'photoSource' : '',
+        'providerId' : '',
+        'uid': ''
+    },
+    'privacySettings': {
+        'DOBPrivacy': false,
+        'checkInPrivacy': false,
+        'favoritingPrivacy': false,
+        'genderPrivacy': false,
+        'orientationPrivacy': false,
+        'public': true,
+        'searchPrivacy': false,
+        'visitedPrivacy': false
+    }
+}
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -308,9 +344,31 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
     let email = body.email;
     try {
         let userData = await db.collection('users').doc(email).get();
-        if(userData.exists){
+        if (userData.exists) {
             functions.logger.log('verifyUser() found an existing user object.');
-            response.json({ result: userData.data() });
+            let userSchemaKeys = Object.keys(userSchema);
+            let currentUserKeys = Object.keys(userData.data());
+            let currentUserObj = userData.data();
+            if(userSchemaKeys == currentUserKeys) {
+                response.json({ result: currentUserObj });
+            }
+            else {
+                for(i = 0; i < userSchemaKeys.length; i++) {
+                    let key = userSchemaKeys[i];
+                    if(typeof currentUserObj[key] == 'undefined') {
+                        if(typeof userSchema[key] === 'object') {
+                            currentUserObj[key] = {};
+                        }
+                        else if (userSchema[key] instanceof Array) {
+                            currentUserObj[key] = [];
+                        }
+                        else if (typeof userSchema[key] === "string") {
+                            currentUserObj[key] = null;
+                        }
+                    }
+                }
+                response.json({ result: currentUserObj });
+            }
         }
         else {
             if(user != undefined || user != null) {
@@ -322,6 +380,12 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                 userObj['providerId'] = user.providerId ? user.providerId : "";
                 userObj['uid'] = user.uid;
                 userObj['friends'] = {};
+                userObj['gender'] = 'Unknown';
+                userObj['dateOfBirth'] = 'Unknown';
+                userObj['sexualOrientation'] = 'Unknown';
+                userObj['bio'] = 'None';
+                userObj['favoriteDrinks'] = [];
+                userObk['favoritePlaces'] = {};
                 userObj['providerData'] = {
                     displayName : user.displayName,
                     email : user.email,
