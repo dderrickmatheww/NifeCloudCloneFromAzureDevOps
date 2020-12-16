@@ -307,7 +307,7 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                             obj.friendsArr.push(friend.data());
                         }
                     });
-                    let keys = Object.keys(obj.userFriends);
+                    let keys = obj.userFriends ? Object.keys(obj.userFriends) : [];
                     keys.forEach(async (key) => {
                         obj.friendsArr.forEach(friend=>{
                             if(friend.email == key) {
@@ -371,29 +371,29 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
             }
         }
         else {
-            if(user != undefined || user != null) {
+            if(user !== undefined || user !== null) {
                 let userObj = {};
-                userObj['displayName'] = user.displayName;
+                userObj['displayName'] = user.displayName ? user.displayName : "Unknown";
                 userObj['email'] = user.email;
-                userObj['phoneNumber'] = user.phoneNumber;
-                userObj['photoSource'] = user.photoURL;
-                userObj['providerId'] = user.providerId ? user.providerId : "";
-                userObj['uid'] = user.uid;
+                userObj['phoneNumber'] = user.phoneNumber ? user.displayName : "Unknown";
+                userObj['photoSource'] = user.photoURL ? user.photoURL : "Unknown";
+                userObj['providerId'] = user.providerId ? user.providerId : "Unknown";
+                userObj['uid'] = user.uid ? user.uid : "Unknown";
                 userObj['friends'] = {};
                 userObj['gender'] = 'Unknown';
                 userObj['dateOfBirth'] = 'Unknown';
                 userObj['sexualOrientation'] = 'Unknown';
                 userObj['bio'] = 'None';
                 userObj['favoriteDrinks'] = [];
-                userObk['favoritePlaces'] = {};
+                userObj['favoritePlaces'] = {};
                 userObj['providerData'] = {
-                    displayName : user.displayName,
+                    displayName : user.displayName ? user.displayName : "Unknown",
                     email : user.email,
-                    phoneNumber : user.phoneNumber,
-                    photoSource : user.photoURL,
-                    providerId : user.providerId ? user.providerId : "",
-                    uid : user.uid,
-                }
+                    phoneNumber : user.phoneNumber  ? user.photoURL : "Unknown",
+                    photoSource : user.photoURL ? user.photoURL : "Unknown",
+                    providerId : user.providerId ? user.providerId : "Unknown",
+                    uid : user.uid ? user.uid : "Unknown",
+                };
                 userObj['privacySettings'] = {
                     DOBPrivacy: false,
                     checkInPrivacy: false,
@@ -404,7 +404,7 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                     searchPrivacy: false,
                     visitedPrivacy: false
                  };
-                db.collection('users').doc(email).set(userObj, { merge: true });
+                await db.collection('users').doc(email).set(userObj, { merge: true });
                 response.json({ result: userObj });
                 functions.logger.log('verifyUser created a new user object.');
             }
