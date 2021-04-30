@@ -1,11 +1,14 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const geolib = require('geolib');
+const { Expo } = require('expo-server-sdk')
 const { user } = require('firebase-functions/lib/providers/auth');
 const { object } = require('firebase-functions/lib/providers/storage');
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
 const db = admin.firestore();
+
+let expo = new Expo()
 
 //Current User Schema
 const userSchema = {
@@ -415,6 +418,55 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
         functions.logger.log('verifyUser errored out with a Firebase Error: ' +  error);
     }
 });
+
+exports.sendFriendRequestNotification =  functions.https.onRequest(async(request, response) => {
+    let body = JSON.parse(request.body);
+    let friendEmail = body.friendEmail;
+    let user = body.user;
+    try{
+        let friend = await db.collection('users').doc(friendEmail).get();
+        if(friend.exists){
+            friend = friend.data();
+            if(friend.expoPushToken){
+                let message = [{
+                    to:friend.expoPushToken,
+                    sound: 'default',
+                    body:'' + user + ' has requested to be your friend!',
+                    data:{isFriendRequest: true}
+                }]
+                let chunks = expo.chunkPushNotifications(message);
+                let tickets = [];
+                // Send the chunks to the Expo push notification service. There are
+                // different strategies you could use. A simple one is to send one chunk at a
+                // time, which nicely spreads the load out over time:
+                for (let chunk of chunks) {
+                    try {
+                        // eslint-disable-next-line no-await-in-loop
+                        let ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+                        response.json({ result: ticketChunk});
+                        tickets.push(...ticketChunk);
+                        // NOTE: If a ticket contains an error code in ticket.details.error, you
+                        // must handle it appropriately. The error codes are listed in the Expo
+                        // documentation:
+                        // https://docs.expo.io/push-notifications/sending-notifications/#individual-errors
+                    } catch (error) {
+                        response.json({ result: 'failed', error: error });
+                    }
+                }
+            }
+            else{
+                response.json({ result: 'failed', error: 'No push token for this user' });
+                functions.logger.log('Send Friend Request errored out with a Firebase Error: ' +  'No push token for this user');
+            }
+
+        }
+    }
+    catch(error){
+        response.json({ result: 'failed', error: error });
+        functions.logger.log('Send Friend Request errored out with a Firebase Error: ' +  error);
+    }
+
+})
 
 //**************** */
 //Buisness Related
