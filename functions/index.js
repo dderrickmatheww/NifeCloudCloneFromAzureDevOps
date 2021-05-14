@@ -299,35 +299,25 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                 let obj = {
                     requests: [],
                     acceptedFriends: [],
-                    friendsArr: [],
                     userFriends: userData.friends
                 };
-                var path = new admin.firestore.FieldPath('friends', email);
-                let docRef = db.collection('users').where(path, '==', true);
-                docRef.get().then(friends =>{
-                    friends.forEach((friend) => {
-                        if(friend && friend.data()) {
-                            obj.friendsArr.push(friend.data());
-                        }
-                    });
-                    let keys = obj.userFriends ? Object.keys(obj.userFriends) : [];
-                    keys.forEach(async (key) => {
-                        obj.friendsArr.forEach(friend=>{
-                            if(friend.email == key) {
-                                if(obj.userFriends[key] == null){
-                                    obj.requests.push(friend);
-                                } 
-                                else if(obj.userFriends[key] == true){
-                                    obj.acceptedFriends.push(friend);
-                                }
-                            }
-                        })
-                    });
-                    userData['friendData'] = obj;
-                    functions.logger.log(userData);
-                    response.json({ result: userData });
+                let path = new admin.firestore.FieldPath('friends', email);
+                let friendData = await db.collection('users').where(path, '==', true).get();
+                friendData.forEach((doc) =>{
+                    if(doc.data())
+                        obj.acceptedFriends.push(doc.data());
                 })
-                
+                let reqPath = new admin.firestore.FieldPath('requests', email);
+                let friendRequests = await db.collection('users').where(reqPath, '==', true).get();
+                friendRequests.forEach((doc) =>{
+                    if(doc.data())
+                        obj.requests.push(doc.data());
+                })
+                userData['friendData'] = obj;
+                functions.logger.log(userData);
+                response.json({ result: userData });
+
+
             }
         }
         else {
@@ -338,6 +328,21 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
     catch(error) {
         response.json({ result: 'failed', error: error });
         functions.logger.log('No data found. Error: ' + error);
+    }
+
+    function getFriendRequests(email, cb)  {
+        let path = new admin.firestore.FieldPath('requests', email);
+        db.collection('users').doc(email).where(path, '==', true).get()
+            .then(requests => {
+                let ret = [];
+                requests.forEach((friend) => {
+                    if(friend && friend.data()) {
+                        ret.push(friend.data());
+                    }
+                });
+                cb(ret);
+            })
+            .catch(err => functions.logger.log(err))
     }
 });
 
