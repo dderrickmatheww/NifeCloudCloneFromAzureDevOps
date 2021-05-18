@@ -350,6 +350,7 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
     let user = body.user;
     let email = body.email;
+    let business = body.business;
     try {
         let userData = await db.collection('users').doc(email).get();
         if (userData.exists) {
@@ -412,9 +413,42 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                     searchPrivacy: false,
                     visitedPrivacy: false
                  };
-                await db.collection('users').doc(email).set(userObj, { merge: true });
-                response.json({ result: userObj });
-                functions.logger.log('verifyUser created a new user object.');
+                functions.logger.log(business);
+                if(business){
+                   let businessObj =  {
+                       "Address": business.Address,
+                       "City": business.City,
+                       "State": business.State,
+                       "businessEmail": business.businessEmail,
+                       "businessId": business.businessId,
+                       "businessName": business.businessName,
+                       "businessPhone": business.businessPhone,
+                       "coordinates": {
+                            "latitude": business.coordinates.latitude,
+                            "longitude": business.coordinates.longitude,
+                        },
+                        "displayName": business.businessName,
+                        "email": business.email,
+                        "ownerName": business.ownerName,
+                        "zip": business.zip,
+                        'events':[],
+                        'specials':[],
+                    }
+
+                    userObj["businessId"] = business.businessId;
+                    userObj["isBusiness"] = true;
+                    await db.collection('businesses').doc(email).set(businessObj, { merge: true });
+                    await db.collection('users').doc(email).set(userObj, { merge: true });
+                    response.json({ result: userObj });
+                    functions.logger.log('verifyUser created a new business object.');
+                    functions.logger.log(businessObj);
+                } else{
+                    await db.collection('users').doc(email).set(userObj, { merge: true });
+                    response.json({ result: userObj });
+                    functions.logger.log('verifyUser created a new user object.');
+                }
+
+
             }
         }
     }
