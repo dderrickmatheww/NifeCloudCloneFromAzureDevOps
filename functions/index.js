@@ -7,6 +7,7 @@ const { object } = require('firebase-functions/lib/providers/storage');
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
 const db = admin.firestore();
+const states = require('us-state-converter')
 
 let expo = new Expo()
 
@@ -561,3 +562,23 @@ exports.sendVerificationEmail = functions.https.onRequest(async (request, respon
 })
 
 
+exports.getNifeBusinessesNearby = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let user = body.user;
+    let retBusinesses = [];
+    try {
+        const state = states(user.loginLocation.region.region);
+        let path = new admin.firestore.FieldPath('data', 'location', 'state');
+        let businessRef = db.collection('businesses').where(path, '==', state.usps).get();
+        (await businessRef).forEach((bus)=>{
+            if(bus.data())
+                retBusinesses.push(bus.data().businessId);
+        })
+
+        response.json({result: retBusinesses});
+    } catch (error) {
+        response.json({result: 'failed', error: error});
+        functions.logger.log('Send Friend Request errored out with a Firebase Error: ' + error);
+    }
+
+})
