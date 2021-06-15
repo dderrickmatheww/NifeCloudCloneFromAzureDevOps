@@ -7,7 +7,7 @@ const { object } = require('firebase-functions/lib/providers/storage');
 admin.initializeApp();
 const FieldValue = admin.firestore.FieldValue;
 const db = admin.firestore();
-const states = require('us-state-converter')
+const states = require('us-state-converter');
 
 let expo = new Expo()
 
@@ -304,7 +304,7 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                 };
                 let path = new admin.firestore.FieldPath('friends', email);
                 let friendData = await db.collection('users').where(path, '==', true).get();
-                friendData.forEach((doc) =>{
+                friendData.forEach((doc) => {
                     if(doc.data())
                         obj.acceptedFriends.push(doc.data());
                 })
@@ -317,8 +317,6 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
                 userData['friendData'] = obj;
                 functions.logger.log(userData);
                 response.json({ result: userData });
-
-
             }
         }
         else {
@@ -448,8 +446,6 @@ exports.verifyUser = functions.https.onRequest(async (request, response) => {
                     response.json({ result: userObj });
                     functions.logger.log('verifyUser created a new user object.');
                 }
-
-
             }
         }
     }
@@ -506,7 +502,43 @@ exports.sendFriendRequestNotification =  functions.https.onRequest(async(request
         functions.logger.log('Send Friend Request errored out with a Firebase Error: ' +  error);
     }
 
-})
+});
+
+exports.getUserFeed = functions.https.onRequest(async (request, response) => { 
+    const body = JSON.parse(request.body);
+    const email = body.email;
+    const skip = parseInt(body.skip);
+    const take = parseInt(body.take);
+    try {
+        const userData = (await db.collection('users').doc(email).get()).data();
+        const userFriends = userData.friends;
+        let result = [];
+        let index = 0;
+        for (prop in userFriends)  {
+            if (index <= take) {
+                if(userFriends[prop] == true) {
+                    let friendFeed = (await db.collection('feed').doc(prop).get()).data();
+                    if (friendFeed) {
+                        result.push(friendFeed);
+                        index++;
+                    }
+                }
+            }
+            else {
+                break;
+            }
+        }
+        if (skip !== 0 && skip < result.length) {
+            result = result.splice(skip, result.length);
+        }
+        response.json({ result: result });
+    }
+    catch (err) {
+        response.json({ result: 'failed', error: error });
+        functions.logger.log('getUserFeed errored out with a Firebase Error: ' +  error);
+    }
+    
+});
 
 //**************** */
 //Buisness Related
@@ -559,8 +591,7 @@ exports.sendVerificationEmail = functions.https.onRequest(async (request, respon
     .catch((error) => {
         functions.logger.log('sendVerificationEmail "mail.set" function failed. Error Message: ' + error.message);
     });
-})
-
+});
 
 exports.getNifeBusinessesNearby = functions.https.onRequest(async (request, response) => {
     let body = JSON.parse(request.body);
@@ -581,4 +612,4 @@ exports.getNifeBusinessesNearby = functions.https.onRequest(async (request, resp
         functions.logger.log('Send Friend Request errored out with a Firebase Error: ' + error);
     }
 
-})
+});
