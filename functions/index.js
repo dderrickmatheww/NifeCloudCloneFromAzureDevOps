@@ -505,37 +505,31 @@ exports.sendFriendRequestNotification =  functions.https.onRequest(async(request
 });
 
 exports.getUserFeed = functions.https.onRequest(async (request, response) => { 
-    const body = JSON.parse(request.body);
-    const email = body.email;
-    const skip = parseInt(body.skip);
-    const take = parseInt(body.take);
+    //const body = JSON.parse(request.body);
+    const email = request.query.email //body.email;
+    const skip = parseInt(request.query.skip) //parseInt(body.skip);
+    const take = parseInt(request.query.take) //parseInt(body.take);
     try {
         const userData = (await db.collection('users').doc(email).get()).data();
-        const userFriends = userData.friends;
-        let result = [];
-        let index = 0;
-        for (prop in userFriends)  {
-            if (index <= take) {
-                if(userFriends[prop] == true) {
-                    let friendFeed = (await db.collection('feed').doc(prop).get()).data();
-                    if (friendFeed) {
-                        result.push(friendFeed);
-                        index++;
-                    }
-                }
+        const userFriends = Object.keys(userData.friends).filter(friend => userData.friends[friend] == true);
+        console.log(userFriends);
+        const friendData = await Promise.all(userFriends.map(async friend => {
+            return { 
+                [friend]: await db.collection("feed")
+                    .doc(friend)
+                    .get()
+                    .then(doc => doc.data())
             }
-            else {
-                break;
-            }
+        }));
+        if (skip !== 0 && skip < friendData.length) {
+            friendData = friendData.splice(skip, friendData.length);
         }
-        if (skip !== 0 && skip < result.length) {
-            result = result.splice(skip, result.length);
-        }
-        response.json({ result: result });
+        response.json({ result: friendData.filter(obj => JSON.stringify(obj) != JSON.stringify({}))});
     }
     catch (err) {
-        response.json({ result: 'failed', error: error });
-        functions.logger.log('getUserFeed errored out with a Firebase Error: ' +  error);
+        response.json({ result: 'failed', error: err });
+        functions.logger.log('getUserFeed errored out with a Firebase Error: ' +  err);
+        console.log(err)
     }
     
 });
