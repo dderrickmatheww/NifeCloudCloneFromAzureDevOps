@@ -510,28 +510,124 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
     const skip = parseInt(request.query.skip) //parseInt(body.skip);
     const take = parseInt(request.query.take) //parseInt(body.take);
     try {
+        let timeline = [];
         const userData = (await db.collection('users').doc(email).get()).data();
         const userFriends = Object.keys(userData.friends).filter(friend => userData.friends[friend] == true);
-        console.log(userFriends);
-        const friendData = await Promise.all(userFriends.map(async friend => {
-            return { 
-                [friend]: await db.collection("feed")
-                    .doc(friend)
-                    .get()
-                    .then(doc => doc.data())
-            }
+        await Promise.all(async () => {
+            await db.collection("feed")
+            .doc(email)
+            .get()
+            .then((doc) =>  { 
+                if (doc && doc.data()) {
+                    let userData = doc.data();
+                    let checkIn = userData.checkIn ? Object.keys(userData.checkIn).length : 0;
+                    let lastVisited = userData.lastVisited ? Object.keys(userData.lastVisited).length : 0;
+                    let userTimeline = userData.timeline ? userData.timeline.length : 0;
+                    if (userTimeline > 0) {
+                        timeline.push(...userData.timeline);
+                    }
+                    if (checkIn > 0) {
+                        if (
+                            (userData.checkIn.privacy == "Public" || userData.checkIn.privacy == "Friends") &&
+                            userData.checkIn.checkInTime
+                        ) {
+                            let obj = {
+                                name: userData.displayName,
+                                text: "Checked in " + (userData.checkIn.name ? " at " + userData.checkIn.name : " somewhere! No name provided!"),
+                                time: new Date(userData.checkIn.checkInTime.seconds ? userData.checkIn.checkInTime.seconds * 1000 : userData.checkIn.checkInTime._seconds * 1000),
+                                image: userData.photoSource ? { uri: userData.photoSource } : null,
+                                status: false,
+                                visited: false,
+                                checkedIn: true,
+                            }
+                            timeline.push(obj);
+                        }
+                    }
+                    if (lastVisited > 0) {
+                        let keys = Object.keys(userData.lastVisited);
+                        keys.forEach((key) => {
+                            let visited = userData.lastVisited[key];
+                            if (visited.privacy == "Public" || visited.privacy == "Friends" ) {
+                                let obj = {
+                                    name: userData.displayName,
+                                    text: "Visited " + (visited.name ? visited.name : " somewhere! No name provided!"),
+                                    time: new Date(visited.checkInTime.seconds ? visited.checkInTime.seconds * 1000 : visited.checkInTime._seconds * 1000),
+                                    image: userData.photoSource ? { uri: userData.photoSource } : null,
+                                    status: false,
+                                    visited: true,
+                                    checkedIn: false,
+                                }
+                                timeline.push(obj);
+                            }
+                        });
+                    }
+                }
+            });
+        });
+        await Promise.all(userFriends.forEach(async friend => {
+            await db.collection("feed")
+            .doc(friend)
+            .get()
+            .then((doc) =>  { 
+                if (doc && doc.data()) {
+                    let friendData = doc.data();
+                    let checkIn = friendData.checkIn ? Object.keys(friendData.checkIn).length : 0;
+                    let lastVisited = friendData.lastVisited ? Object.keys(friendData.lastVisited).length : 0;
+                    let friendTimeline = friendData.timeline ? friendData.timeline.length : 0;
+                    if (friendTimeline > 0) {
+                        timeline.push(...friendData.timeline);
+                    }
+                    if (checkIn > 0) {
+                        if (
+                            (friendData.checkIn.privacy == "Public" || friendData.checkIn.privacy == "Friends") &&
+                            friendData.checkIn.checkInTime
+                        ) {
+                            let obj = {
+                                name: friendData.displayName,
+                                text: "Checked in " + (friendData.checkIn.name ? " at " + friendData.checkIn.name : " somewhere! No name provided!"),
+                                time: new Date(friendData.checkIn.checkInTime.seconds ? friendData.checkIn.checkInTime.seconds * 1000 : friendData.checkIn.checkInTime._seconds * 1000),
+                                image: friendData.photoSource ? { uri: friendData.photoSource } : null,
+                                status: false,
+                                visited: false,
+                                checkedIn: true,
+                            }
+                            timeline.push(obj);
+                        }
+                    }
+                    if (lastVisited > 0) {
+                        let keys = Object.keys(friendData.lastVisited);
+                        keys.forEach((key) => {
+                            let visited = friendData.lastVisited[key];
+                            if (visited.privacy == "Public" || visited.privacy == "Friends") {
+                                let obj = {
+                                    name: friendData.displayName,
+                                    text: "Visited " + (visited.name ? visited.name : " somewhere! No name provided!"),
+                                    time: new Date(visited.checkInTime.seconds ? visited.checkInTime.seconds * 1000 : visited.checkInTime._seconds * 1000),
+                                    image: friendData.photoSource ? { uri: friendData.photoSource } : null,
+                                    status: false,
+                                    visited: true,
+                                    checkedIn: false,
+                                }
+                                timeline.push(obj);
+                            }
+                        });
+                    }
+                }
+            });
         }));
+        timeline = timeline.sort((a, b) => b.time - a.time);
         if (skip !== 0 && skip < friendData.length) {
-            friendData = friendData.splice(skip, friendData.length);
+            timeline = timeline.splice(skip, timeline.length);
         }
-        response.json({ result: friendData.filter(obj => JSON.stringify(obj) != JSON.stringify({}))});
+        if (take !== 0 && take < friendData.length) {
+            timeline = timeline.splice(0, take);
+        }
+        response.json({ result: timeline });
     }
     catch (err) {
-        response.json({ result: 'failed', error: err });
+        response.json({ result: 'failed', error: err.message });
         functions.logger.log('getUserFeed errored out with a Firebase Error: ' +  err);
-        console.log(err)
     }
-    
 });
 
 //**************** */
