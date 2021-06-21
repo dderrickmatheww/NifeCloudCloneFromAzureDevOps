@@ -505,26 +505,26 @@ exports.sendFriendRequestNotification =  functions.https.onRequest(async(request
 });
 
 exports.getUserFeed = functions.https.onRequest(async (request, response) => { 
-    //const body = JSON.parse(request.body);
-    const email = request.query.email //body.email;
-    const skip = parseInt(request.query.skip) //parseInt(body.skip);
-    const take = parseInt(request.query.take) //parseInt(body.take);
+    const body = JSON.parse(request.body);
+    const email = body.email; //request.query.email; 
+    const skip = parseInt(body.skip); //parseInt(request.query.skip);
+    const take = parseInt(body.take); //parseInt(request.query.take) 
     try {
-        let timeline = [];
         const userData = (await db.collection('users').doc(email).get()).data();
         const userFriends = Object.keys(userData.friends).filter(friend => userData.friends[friend] == true);
-        await Promise.all(async () => {
-            await db.collection("feed")
+        if (userFriends.length > 0) {
+            let currentUserFeed = await db.collection("feed")
             .doc(email)
             .get()
             .then((doc) =>  { 
                 if (doc && doc.data()) {
+                    let timeline = [];
                     let userData = doc.data();
-                    let checkIn = userData.checkIn ? Object.keys(userData.checkIn).length : 0;
-                    let lastVisited = userData.lastVisited ? Object.keys(userData.lastVisited).length : 0;
+                    let checkIn = userData.checkIn != "" ? Object.keys(userData.checkIn).length : 0;
+                    let lastVisited = userData.lastVisited != "" ? Object.keys(userData.lastVisited).length : 0;
                     let userTimeline = userData.timeline ? userData.timeline.length : 0;
                     if (userTimeline > 0) {
-                        timeline.push(...userData.timeline);
+                        timeline = [...timeline, ...userData.timeline];
                     }
                     if (checkIn > 0) {
                         if (
@@ -561,68 +561,75 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
                             }
                         });
                     }
+                    return timeline;
+                }
+                else {
+                    return [];
                 }
             });
-        });
-        await Promise.all(userFriends.forEach(async friend => {
-            await db.collection("feed")
-            .doc(friend)
-            .get()
-            .then((doc) =>  { 
-                if (doc && doc.data()) {
-                    let friendData = doc.data();
-                    let checkIn = friendData.checkIn ? Object.keys(friendData.checkIn).length : 0;
-                    let lastVisited = friendData.lastVisited ? Object.keys(friendData.lastVisited).length : 0;
-                    let friendTimeline = friendData.timeline ? friendData.timeline.length : 0;
-                    if (friendTimeline > 0) {
-                        timeline.push(...friendData.timeline);
-                    }
-                    if (checkIn > 0) {
-                        if (
-                            (friendData.checkIn.privacy == "Public" || friendData.checkIn.privacy == "Friends") &&
-                            friendData.checkIn.checkInTime
-                        ) {
-                            let obj = {
-                                name: friendData.displayName,
-                                text: "Checked in " + (friendData.checkIn.name ? " at " + friendData.checkIn.name : " somewhere! No name provided!"),
-                                time: new Date(friendData.checkIn.checkInTime.seconds ? friendData.checkIn.checkInTime.seconds * 1000 : friendData.checkIn.checkInTime._seconds * 1000),
-                                image: friendData.photoSource ? { uri: friendData.photoSource } : null,
-                                status: false,
-                                visited: false,
-                                checkedIn: true,
-                            }
-                            timeline.push(obj);
+            let friendUserFeed = [];
+            for (let i = 0; i < userFriends.length; i++) {
+                let friend = userFriends[i];
+                await db.collection("feed")
+                .doc(friend)
+                .get()
+                .then((doc) =>  { 
+                    if (doc && doc.data()) {
+                        let friendData = doc.data();
+                        let checkIn = friendData.checkIn ? Object.keys(friendData.checkIn).length : 0;
+                        let lastVisited = friendData.lastVisited ? Object.keys(friendData.lastVisited).length : 0;
+                        let friendTimeline = friendData.timeline ? friendData.timeline.length : 0;
+                        if (friendTimeline > 0) {
+                            friendUserFeed = [...friendUserFeed, ...friendData.timeline];
                         }
-                    }
-                    if (lastVisited > 0) {
-                        let keys = Object.keys(friendData.lastVisited);
-                        keys.forEach((key) => {
-                            let visited = friendData.lastVisited[key];
-                            if (visited.privacy == "Public" || visited.privacy == "Friends") {
+                        if (checkIn > 0) {
+                            if (
+                                (friendData.checkIn.privacy == "Public" || friendData.checkIn.privacy == "Friends") &&
+                                friendData.checkIn.checkInTime
+                            ) {
                                 let obj = {
                                     name: friendData.displayName,
-                                    text: "Visited " + (visited.name ? visited.name : " somewhere! No name provided!"),
-                                    time: new Date(visited.checkInTime.seconds ? visited.checkInTime.seconds * 1000 : visited.checkInTime._seconds * 1000),
+                                    text: "Checked in " + (friendData.checkIn.name ? " at " + friendData.checkIn.name : " somewhere! No name provided!"),
+                                    time: new Date(friendData.checkIn.checkInTime.seconds ? friendData.checkIn.checkInTime.seconds * 1000 : friendData.checkIn.checkInTime._seconds * 1000),
                                     image: friendData.photoSource ? { uri: friendData.photoSource } : null,
                                     status: false,
-                                    visited: true,
-                                    checkedIn: false,
+                                    visited: false,
+                                    checkedIn: true,
                                 }
-                                timeline.push(obj);
+                                friendUserFeed.push(obj);
                             }
-                        });
+                        }
+                        if (lastVisited > 0) {
+                            let keys = Object.keys(friendData.lastVisited);
+                            keys.forEach((key) => {
+                                let visited = friendData.lastVisited[key];
+                                if (visited.privacy == "Public" || visited.privacy == "Friends") {
+                                    let obj = {
+                                        name: friendData.displayName,
+                                        text: "Visited " + (visited.name ? visited.name : " somewhere! No name provided!"),
+                                        time: new Date(visited.checkInTime.seconds ? visited.checkInTime.seconds * 1000 : visited.checkInTime._seconds * 1000),
+                                        image: friendData.photoSource ? { uri: friendData.photoSource } : null,
+                                        status: false,
+                                        visited: true,
+                                        checkedIn: false,
+                                    }
+                                    friendUserFeed.push(obj);
+                                }
+                            });
+                        }
                     }
-                }
-            });
-        }));
-        timeline = timeline.sort((a, b) => b.time - a.time);
-        if (skip !== 0 && skip < friendData.length) {
-            timeline = timeline.splice(skip, timeline.length);
+                });
+            }
+            let timeline = [...currentUserFeed, ...friendUserFeed];
+            timeline = timeline.sort((a, b) => b.time - a.time);
+            if (skip !== 0 && skip < timeline.length) {
+                timeline = timeline.splice(skip, timeline.length);
+            }
+            if (take !== 0 && take < timeline.length) {
+                timeline = timeline.splice(0, take);
+            }
+            response.json({ result: timeline });
         }
-        if (take !== 0 && take < friendData.length) {
-            timeline = timeline.splice(0, take);
-        }
-        response.json({ result: timeline });
     }
     catch (err) {
         response.json({ result: 'failed', error: err.message });
