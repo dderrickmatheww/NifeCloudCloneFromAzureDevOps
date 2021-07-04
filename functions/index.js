@@ -85,7 +85,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
   let businessesArr = [];
   let checkInCount = {};
   let checkInArray = [];
-  let userRef = await db.collection('users').get();
+  let userRef = await db.collection('feed').get();
   if(buisnessUID) {
       userRef.forEach(doc => {
           if(doc.data().checkIn) {
@@ -93,7 +93,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                   userArr.push(doc.data().checkIn.buisnessUID = {
                       checkIn: doc.data().checkIn,
                       user: {
-                          email: doc.data().email,
+                          email: doc.data().username,
                           checkInTime: doc.data().checkIn.checkInTime,
                           privacy: doc.data().checkIn.privacy
                       }
@@ -150,7 +150,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                     userArr.push(doc.data().checkIn.buisnessUID = {
                         checkIn: doc.data().checkIn,
                         user: {
-                            email: doc.data().email,
+                            email: doc.data().username,
                             checkInTime: doc.data().checkIn.checkInTime,
                             privacy: doc.data().checkIn.privacy
                         }
@@ -512,50 +512,54 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
     try {
         const userData = (await db.collection('users').doc(email).get()).data();
         const userFriends = Object.keys(userData.friends).filter(friend => userData.friends[friend] == true);
+        let currentUserFeed = [];
+        let friendUserFeed = [];
         if (userFriends.length > 0) {
-            let currentUserFeed = await db.collection("feed")
+            currentUserFeed = await db.collection("feed")
             .doc(email)
             .get()
             .then((doc) =>  { 
                 if (doc && doc.data()) {
                     let timeline = [];
-                    let userData = doc.data();
-                    let checkIn = userData.checkIn != "" ? Object.keys(userData.checkIn).length : 0;
-                    let lastVisited = userData.lastVisited != "" ? Object.keys(userData.lastVisited).length : 0;
-                    let userTimeline = userData.timeline ? userData.timeline.length : 0;
+                    let feedData = doc.data();
+                    let checkIn = feedData.checkIn ? Object.keys(feedData.checkIn).length : 0;
+                    let lastVisited = feedData.lastVisited ? Object.keys(feedData.lastVisited).length : 0;
+                    let userTimeline = feedData.timeline ? feedData.timeline.length : 0;
                     if (userTimeline > 0) {
-                        timeline = [...timeline, ...userData.timeline];
+                        timeline = [...timeline, ...feedData.timeline];
                     }
                     if (checkIn > 0) {
                         if (
-                            (userData.checkIn.privacy == "Public" || userData.checkIn.privacy == "Friends") &&
-                            userData.checkIn.checkInTime
+                            (feedData.checkIn.privacy == "Public" || feedData.checkIn.privacy == "Friends") &&
+                            feedData.checkIn.checkInTime
                         ) {
                             let obj = {
-                                name: userData.displayName,
-                                text: "Checked in " + (userData.checkIn.name ? " at " + userData.checkIn.name : " somewhere! No name provided!"),
-                                time: new Date(userData.checkIn.checkInTime.seconds ? userData.checkIn.checkInTime.seconds * 1000 : userData.checkIn.checkInTime._seconds * 1000),
-                                image: userData.photoSource ? { uri: userData.photoSource } : null,
+                                name: feedData.checkIn.username,
+                                text: "Checked in " + (feedData.checkIn.name ? "at " + feedData.checkIn.name : "somewhere! No name provided!"),
+                                time: feedData.checkIn.checkInTime,
+                                image: userData.photoSource ? userData.photoSource : null,
                                 status: false,
                                 visited: false,
                                 checkedIn: true,
+                                businessUID: feedData.checkIn.buisnessUID
                             }
                             timeline.push(obj);
                         }
                     }
                     if (lastVisited > 0) {
-                        let keys = Object.keys(userData.lastVisited);
+                        let keys = Object.keys(feedData.lastVisited);
                         keys.forEach((key) => {
-                            let visited = userData.lastVisited[key];
+                            let visited = feedData.lastVisited[key];
                             if (visited.privacy == "Public" || visited.privacy == "Friends" ) {
                                 let obj = {
-                                    name: userData.displayName,
-                                    text: "Visited " + (visited.name ? visited.name : " somewhere! No name provided!"),
-                                    time: new Date(visited.checkInTime.seconds ? visited.checkInTime.seconds * 1000 : visited.checkInTime._seconds * 1000),
-                                    image: userData.photoSource ? { uri: userData.photoSource } : null,
+                                    name: visited.username,
+                                    text: "Visited " + (visited.name ? visited.name : "somewhere! No name provided!"),
+                                    time: visited.checkInTime,
+                                    image: userData.photoSource ? userData.photoSource : null,
                                     status: false,
                                     visited: true,
                                     checkedIn: false,
+                                    businessUID: key
                                 }
                                 timeline.push(obj);
                             }
@@ -567,7 +571,6 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
                     return [];
                 }
             });
-            let friendUserFeed = [];
             for (let i = 0; i < userFriends.length; i++) {
                 let friend = userFriends[i];
                 await db.collection("feed")
@@ -588,13 +591,14 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
                                 friendData.checkIn.checkInTime
                             ) {
                                 let obj = {
-                                    name: friendData.displayName,
-                                    text: "Checked in " + (friendData.checkIn.name ? " at " + friendData.checkIn.name : " somewhere! No name provided!"),
-                                    time: new Date(friendData.checkIn.checkInTime.seconds ? friendData.checkIn.checkInTime.seconds * 1000 : friendData.checkIn.checkInTime._seconds * 1000),
-                                    image: friendData.photoSource ? { uri: friendData.photoSource } : null,
+                                    name: friendData.checkIn.username,
+                                    text: "Checked in " + (friendData.checkIn.name ? "at " + friendData.checkIn.name : "somewhere! No name provided!"),
+                                    time: friendData.checkIn.checkInTime,
+                                    image: friendData.image ? friendData.image : null,
                                     status: false,
                                     visited: false,
                                     checkedIn: true,
+                                    businessUID: friendData.checkIn.buisnessUID
                                 }
                                 friendUserFeed.push(obj);
                             }
@@ -605,13 +609,14 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
                                 let visited = friendData.lastVisited[key];
                                 if (visited.privacy == "Public" || visited.privacy == "Friends") {
                                     let obj = {
-                                        name: friendData.displayName,
-                                        text: "Visited " + (visited.name ? visited.name : " somewhere! No name provided!"),
-                                        time: new Date(visited.checkInTime.seconds ? visited.checkInTime.seconds * 1000 : visited.checkInTime._seconds * 1000),
-                                        image: friendData.photoSource ? { uri: friendData.photoSource } : null,
+                                        name: visited.username,
+                                        text: "Visited " + (visited.name ? visited.name : "somewhere! No name provided!"),
+                                        time: visited.checkInTime,
+                                        image: friendData.image ? friendData.image : null,
                                         status: false,
                                         visited: true,
                                         checkedIn: false,
+                                        businessUID: key
                                     }
                                     friendUserFeed.push(obj);
                                 }
