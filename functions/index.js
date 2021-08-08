@@ -704,8 +704,11 @@ exports.getNifeBusinessesNearby = functions.https.onRequest(async (request, resp
         let path = new admin.firestore.FieldPath('data', 'location', 'state');
         let businessRef = db.collection('businesses').where(path, '==', state.usps).get();
         (await businessRef).forEach((bus)=>{
-            if(bus.data())
-                retBusinesses.push(bus.data().data);
+            if(bus.data()) {
+                let data = bus.data().data
+                data['photoSource'] = bus.data().photoSource;
+                retBusinesses.push(data);
+            }
         })
 
         response.json({result: retBusinesses});
