@@ -705,7 +705,7 @@ exports.getNifeBusinessesNearby = functions.https.onRequest(async (request, resp
         let businessRef = db.collection('businesses').where(path, '==', state.usps).get();
         (await businessRef).forEach((bus)=>{
             if(bus.data())
-                retBusinesses.push(bus.data().businessId);
+                retBusinesses.push(bus.data().data);
         })
 
         response.json({result: retBusinesses});
