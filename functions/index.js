@@ -374,20 +374,6 @@ exports.getUserData = functions.https.onRequest(async (request, response) => {
         functions.logger.log('No data found. Error: ' + error);
     }
 
-    function getFriendRequests(email, cb)  {
-        let path = new admin.firestore.FieldPath('requests', email);
-        db.collection('users').doc(email).where(path, '==', true).get()
-            .then(requests => {
-                let ret = [];
-                requests.forEach((friend) => {
-                    if(friend && friend.data()) {
-                        ret.push(friend.data());
-                    }
-                });
-                cb(ret);
-            })
-            .catch(err => functions.logger.log(err))
-    }
 });
 
 exports.verifyUser = functions.https.onRequest(async (request, response) => { 
@@ -762,6 +748,26 @@ exports.getNifeBusinessesNearby = functions.https.onRequest(async (request, resp
     } catch (error) {
         response.json({result: 'failed', error: error});
         functions.logger.log('Send Friend Request errored out with a Firebase Error: ' + error);
+    }
+
+});
+
+exports.isBusinessRegistered = functions.https.onRequest(async (request, response) => {
+    let body = JSON.parse(request.body);
+    let businessId = body.businessId;
+    try {
+        const business = db.collection('businesses').where('businessId', '==', businessId).get();
+        const ret = [];
+        (await business).forEach((doc) => {
+            if(doc.data()){
+                ret.push(doc.data())
+            }
+        })
+        const isBusinessRegistered =  ret.length > 0;
+        response.json({result: isBusinessRegistered});
+    } catch (error) {
+        response.json({result: 'failed', error: error});
+        functions.logger.log('isBusinessRegistered errored out with a Firebase Error: ' + error);
     }
 
 });
