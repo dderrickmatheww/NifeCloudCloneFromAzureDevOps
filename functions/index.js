@@ -46,6 +46,23 @@ const userSchema = {
     }
 }
 
+//Current Feed schema
+const feedSchema = {
+    'checkIn': {},
+    'lastVistied': {},
+    'timeline': [
+        {
+            'checkIn': Boolean,
+            'image': String,
+            'name': String,
+            'statusImage': String,
+            'text': String,
+            "uid": String,
+            "visited": Boolean
+        }
+    ],
+}
+
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
 
@@ -85,6 +102,7 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
   let businessesArr = [];
   let checkInCount = {};
   let checkInArray = [];
+  let businessTimeline = [];
   let userRef = await db.collection('feed').get();
   if(buisnessUID) {
       userRef.forEach(doc => {
@@ -110,7 +128,13 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
     }
     else {
         userRef.forEach(doc => {
-            if(doc.data().checkIn && !doc.data().checkIn.address == "") {
+            const data = doc.data();
+            if (data.isBusiness) {
+                data.timeline.forEach((status) => {
+                    businessTimeline.push(status);
+                });
+            }
+            if(data.checkIn && !data.checkIn.address == "") {
                 var withinRadius = (checkIn, userLocation, boolean) => {
                   var isWithinRadius;
                   let checkInLat = parseInt(checkIn.latAndLong.split(',')[0]);
@@ -146,17 +170,17 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                       return isWithinRadius;
                   }
                 }
-                if(withinRadius(doc.data().checkIn, userLocation, false)) {
-                    userArr.push(doc.data().checkIn.buisnessUID = {
-                        checkIn: doc.data().checkIn,
+                if(withinRadius(data.checkIn, userLocation, false)) {
+                    userArr.push(data.checkIn.buisnessUID = {
+                        checkIn: data.checkIn,
                         user: {
-                            email: doc.data().username,
-                            checkInTime: doc.data().checkIn.checkInTime,
-                            privacy: doc.data().checkIn.privacy
+                            email: data.username,
+                            checkInTime: data.checkIn.checkInTime,
+                            privacy: data.checkIn.privacy
                         }
                     });
-                    if(!businessesArr.includes(doc.data().checkIn.buisnessUID)) {
-                        businessesArr.push(doc.data().checkIn.buisnessUID);
+                    if(!businessesArr.includes(data.checkIn.buisnessUID)) {
+                        businessesArr.push(data.checkIn.buisnessUID);
                     }
                 }
             }
@@ -168,12 +192,11 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                 users: [],
                 buisnessData: null
             }
-            userArr.forEach((element2) => {
-              if(element2.checkIn.buisnessUID == element) {
+            const checkInUsers = userArr.filter(index => index.checkIn.buisnessUID == element);
+            checkInUsers.forEach((user) => {
                 checkInCount['checkedIn']++;
-                checkInCount['users'].push(element2.user);
-                checkInCount['buisnessData'] = element2.checkIn;
-              }
+                checkInCount['users'].push(user.userEmail ? user.userEmail : user.displayName);
+                checkInCount['buisnessData'] = user.checkIn;
             });
             checkInArray.push(checkInCount);
         });
@@ -200,7 +223,30 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
             (order === 'desc') ? (comparison * -1) : comparison
           );
       });
+        businessTimeline.sort(function innerSort(a, b) {
+            let key = "time";
+            let order = "desc";
+            if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+            // property doesn't exist on either object
+            return 0;
+            }
+            const varA = (typeof a[key] === 'string')
+            ? a[key].toUpperCase() : a[key];
+            const varB = (typeof b[key] === 'string')
+            ? b[key].toUpperCase() : b[key];
+        
+            let comparison = 0;
+            if (varA > varB) {
+            comparison = 1;
+            } else if (varA < varB) {
+            comparison = -1;
+            }
+            return (
+            (order === 'desc') ? (comparison * -1) : comparison
+            );
+        });
       dataObj['countData'] = checkInArray;
+      dataObj['businessStatus'] = businessTimeline;
       response.json({result: dataObj});
     }
   }
@@ -216,13 +262,13 @@ exports.TTL =  functions.pubsub.schedule('every 1 hours').onRun(async () => {
             if (doc.data().lastVisited) {
                 let updated1 = false;
                 for (var prop in doc.data().lastVisited) {
-                    let currentVisitedDateCheck = ((new Date().getTime() - (parseInt(doc.data().lastVisited[prop].checkInTime._seconds ? doc.data().lastVisited[prop].checkInTime._seconds : doc.data().lastVisited[prop].checkInTime.seconds) * 1000)) > (86400000 * 7))
-                    //Checking lastVisited object for outdataed data. (x > 7 days)
-                    if(currentVisitedDateCheck) {
-                        await doc.ref.update({
-                            ['lastVisited.' + prop]: FieldValue.delete()
-                        });
-                        updated1 = true;
+                        let currentVisitedDateCheck = ((new Date().getTime() - (parseInt(doc.data().lastVisited[prop].checkInTime._seconds ? doc.data().lastVisited[prop].checkInTime._seconds : doc.data().lastVisited[prop].checkInTime.seconds) * 1000)) > (86400000 * 7))
+                        //Checking lastVisited object for outdataed data. (x > 7 days)
+                        if(currentVisitedDateCheck) {
+                            await doc.ref.update({
+                                ['lastVisited.' + prop]: FieldValue.delete()
+                            });
+                            updated1 = true;
                     }
                 }
                 DeletedOpts['lastVisited'] = updated1;
