@@ -94,205 +94,214 @@ const feedSchema = {
 //**************** */
 
 exports.checkInCount = functions.https.onRequest(async (request, response) => {
-  let body = JSON.parse(request.body);
-  let buisnessUID = body.buisnessUID;
-  let userLocation = body.userLocation;
-  let dataObj = {};
-  let userArr = [];
-  let businessesArr = [];
-  let checkInCount = {};
-  let checkInArray = [];
-  let businessTimeline = [];
-  let userRef = await db.collection('feed').get();
-  if(buisnessUID) {
-      userRef.forEach(doc => {
-          if(doc.data().checkIn) {
-              if(doc.data().checkIn.buisnessUID == buisnessUID) {
-                  userArr.push(doc.data().checkIn.buisnessUID = {
-                      checkIn: doc.data().checkIn,
-                      user: {
-                          email: doc.data().username,
-                          checkInTime: doc.data().checkIn.checkInTime,
-                          privacy: doc.data().checkIn.privacy
-                      }
-                  });
-              }
-          }
-      });
-      response.json({result: userArr});
-  }
-  else {
-    if(userRef.empty){
-      response.json({result: 'No matching documents.'});
-      return;
-    }
-    else {
-        userRef.forEach(doc => {
-            const data = doc.data();
-            if (data.isBusiness) {
-                data.timeline.forEach((status) => {
-                    businessTimeline.push(status);
-                });
-            }
-            if(data.checkIn && !data.checkIn.address == "") {
-                var withinRadius = (checkIn, userLocation, boolean) => {
-                  var isWithinRadius;
-                  let checkInLat = parseInt(checkIn.latAndLong.split(',')[0]);
-                  let checkInLong = parseInt(checkIn.latAndLong.split(',')[1]);
-                  let userLat = parseInt(userLocation.coords.latitude);
-                  let userLong = parseInt(userLocation.coords.longitude);
-                  if(boolean) {
-                    isWithinRadius = geolib.isPointWithinRadius(
-                          {
-                              latitude: checkInLat,
-                              longitude: checkInLong
-                          }, 
-                          {
-                              latitude: userLat,
-                              longitude: userLong
-                          }, 
-                          100
-                      ); 
-                      return isWithinRadius;
-                  }
-                  else {
-                    isWithinRadius = geolib.isPointWithinRadius(
-                          {
-                              latitude: checkInLat,
-                              longitude: checkInLong
-                          }, 
-                          {
-                              latitude: userLat,
-                              longitude: userLong
-                          }, 
-                          32187
-                      ); 
-                      return isWithinRadius;
-                  }
-                }
-                if(withinRadius(data.checkIn, userLocation, false)) {
-                    userArr.push(data.checkIn.buisnessUID = {
-                        checkIn: data.checkIn,
-                        user: {
-                            email: data.username,
-                            checkInTime: data.checkIn.checkInTime,
-                            privacy: data.checkIn.privacy
-                        }
-                    });
-                    if(!businessesArr.includes(data.checkIn.buisnessUID)) {
-                        businessesArr.push(data.checkIn.buisnessUID);
+    let body = request.body ? JSON.parse(request.body) : {};
+    let buisnessUID = body ? body.buisnessUID : false;
+    //let userLocation = body ? body.userLocation : false;
+    let userArr = [];
+    let businessesArr = [];
+    let checkInCount = {};
+    let checkInArray = [];
+    let businessTimeline = [];
+    let userRef = await db.collection('feed').get();
+    if (body && userRef) {
+        if (buisnessUID) {
+            userRef.forEach(doc => {
+                let data = doc.data();
+                if(data && data.checkIn) {
+                    if(data.checkIn.buisnessUID == buisnessUID) {
+                        userArr.push(data.checkIn.buisnessUID = {
+                            checkIn: data.checkIn,
+                            user: {
+                                email: data.username,
+                                checkInTime: data.checkIn.checkInTime,
+                                privacy: data.checkIn.privacy
+                            }
+                        });
                     }
                 }
-            }
-        });
-        businessesArr.forEach((element) => {
-            checkInCount =  {
-                checkedIn: 0,
-                buisnessUID: element,
-                users: [],
-                buisnessData: null
-            }
-            const checkInUsers = userArr.filter(index => index.checkIn.buisnessUID == element);
-            checkInUsers.forEach((user) => {
-                checkInCount['checkedIn']++;
-                checkInCount['users'].push(user.userEmail ? user.userEmail : user.displayName);
-                checkInCount['buisnessData'] = user.checkIn;
             });
-            checkInArray.push(checkInCount);
-        });
-        
-        checkInArray.sort(function innerSort(a, b) {
-          let key = "checkedIn";
-          let order = "desc";
-          if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
-            // property doesn't exist on either object
-            return 0;
-          }
-          const varA = (typeof a[key] === 'string')
-          ? a[key].toUpperCase() : a[key];
-          const varB = (typeof b[key] === 'string')
-          ? b[key].toUpperCase() : b[key];
-      
-          let comparison = 0;
-          if (varA > varB) {
-          comparison = 1;
-          } else if (varA < varB) {
-            comparison = -1;
-          }
-          return (
-            (order === 'desc') ? (comparison * -1) : comparison
-          );
-      });
-        businessTimeline.sort(function innerSort(a, b) {
-            let key = "time";
-            let order = "desc";
-            if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
-            // property doesn't exist on either object
-            return 0;
+            functions.logger.log(`Data Object: ${JSON.stringify(userArr)}`);
+            response.json({ 'result': userArr });
+        }
+        else {
+            userRef.forEach(doc => {
+                let data = doc.data();
+                if (data) {
+                    if (data.isBusiness) {
+                        data.timeline.forEach((status) => {
+                            businessTimeline.push(status);
+                        });
+                    }
+                    if (data.checkIn && data.checkIn.buisnessUID) {
+                        // var withinRadius = (checkIn, userLocation, boolean) => {
+                        //     var isWithinRadius;
+                        //     let checkInLat = parseInt(checkIn.latAndLong.split(',')[0]);
+                        //     let checkInLong = parseInt(checkIn.latAndLong.split(',')[1]);
+                        //     let userLat = parseInt(userLocation.coords.latitude);
+                        //     let userLong = parseInt(userLocation.coords.longitude);
+                        //     if(boolean) {
+                        //         isWithinRadius = geolib.isPointWithinRadius(
+                        //             {
+                        //                 latitude: checkInLat,
+                        //                 longitude: checkInLong
+                        //             }, 
+                        //             {
+                        //                 latitude: userLat,
+                        //                 longitude: userLong
+                        //             }, 
+                        //             100
+                        //         ); 
+                        //         return isWithinRadius;
+                        //     }
+                        //     else {
+                        //         isWithinRadius = geolib.isPointWithinRadius(
+                        //             {
+                        //                 latitude: checkInLat,
+                        //                 longitude: checkInLong
+                        //             }, 
+                        //             {
+                        //                 latitude: userLat,
+                        //                 longitude: userLong
+                        //             }, 
+                        //             32187
+                        //         ); 
+                        //         return isWithinRadius;
+                        //     }
+                        // }
+                        // if(withinRadius(data.checkIn, userLocation, false)) {
+                        userArr.push(data.checkIn.buisnessUID = {
+                            checkIn: data.checkIn,
+                            user: {
+                                email: data.username,
+                                checkInTime: data.checkIn.checkInTime,
+                                privacy: data.checkIn.privacy
+                            }
+                        });
+                        if(!businessesArr.includes(data.checkIn.buisnessUID)) {
+                            businessesArr.push(data.checkIn.buisnessUID);
+                        }
+                        // }
+                    }
+                }
+            });
+            if (businessesArr.length > 0) {
+                businessesArr.forEach((element) => {
+                    checkInCount =  {
+                        checkedIn: 0,
+                        buisnessUID: element,
+                        users: [],
+                        buisnessData: null
+                    }
+                    const checkInUsers = userArr.filter(index => index.checkIn && index.checkIn.buisnessUID == element);
+                    checkInUsers.forEach((user) => {
+                        checkInCount['checkedIn']++;
+                        checkInCount['users'].push(user.userEmail ? user.userEmail : user.displayName);
+                        checkInCount['buisnessData'] = user.checkIn;
+                    });
+                    checkInArray.push(checkInCount);
+                });
+                businessTimeline.sort(function innerSort(a, b) {
+                    let key = "time";
+                    let order = "desc";
+                    if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+                    // property doesn't exist on either object
+                    return 0;
+                    }
+                    const varA = (typeof a[key] === 'string')
+                    ? a[key].toUpperCase() : a[key];
+                    const varB = (typeof b[key] === 'string')
+                    ? b[key].toUpperCase() : b[key];
+                
+                    let comparison = 0;
+                    if (varA > varB) {
+                    comparison = 1;
+                    } else if (varA < varB) {
+                    comparison = -1;
+                    }
+                    return (
+                    (order === 'desc') ? (comparison * -1) : comparison
+                    );
+                });
             }
-            const varA = (typeof a[key] === 'string')
-            ? a[key].toUpperCase() : a[key];
-            const varB = (typeof b[key] === 'string')
-            ? b[key].toUpperCase() : b[key];
-        
-            let comparison = 0;
-            if (varA > varB) {
-            comparison = 1;
-            } else if (varA < varB) {
-            comparison = -1;
+            if (checkInArray.length > 0) {
+                checkInArray.sort(function innerSort(a, b) {
+                    let key = "checkedIn";
+                    let order = "desc";
+                    if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+                        // property doesn't exist on either object
+                        return 0;
+                    }
+                    const varA = (typeof a[key] === 'string')
+                    ? a[key].toUpperCase() : a[key];
+                    const varB = (typeof b[key] === 'string')
+                    ? b[key].toUpperCase() : b[key];
+                
+                    let comparison = 0;
+                    if (varA > varB) {
+                    comparison = 1;
+                    } else if (varA < varB) {
+                        comparison = -1;
+                    }
+                    return (
+                        (order === 'desc') ? (comparison * -1) : comparison
+                    );
+                });
             }
-            return (
-            (order === 'desc') ? (comparison * -1) : comparison
-            );
-        });
-      dataObj['countData'] = checkInArray;
-      dataObj['businessStatus'] = businessTimeline;
-      response.json({result: dataObj});
+            functions.logger.log(`Data Object: ${JSON.stringify({ checkInArray, businessTimeline })}`);
+            response.json({ 'result': { checkInArray, businessTimeline } });
+        }
     }
-  }
+    else {
+        functions.logger.log(`Data Object: ${JSON.stringify({ checkInArray, businessTimeline })}`);
+        response.json({ 'result': { checkInArray: checkInArray, businessTimeline: businessTimeline } });
+    }
 });
 
-exports.TTL =  functions.pubsub.schedule('every 1 hours').onRun(async () => {
+exports.TTL =  functions.pubsub.schedule('every 1 hours').onRun(() => {
     let DeletedObj = {};
     let DeletedOpts = {};
-    await db.collection('feed').get()
+    db.collection('feed').get()
     .then(async querySnapshot => {
         //Grabs all users
         querySnapshot.docs.map(async doc => {
-            if (doc.data().lastVisited) {
-                let updated1 = false;
-                for (var prop in doc.data().lastVisited) {
-                        let currentVisitedDateCheck = ((new Date().getTime() - (parseInt(doc.data().lastVisited[prop].checkInTime._seconds ? doc.data().lastVisited[prop].checkInTime._seconds : doc.data().lastVisited[prop].checkInTime.seconds) * 1000)) > (86400000 * 7))
-                        //Checking lastVisited object for outdataed data. (x > 7 days)
-                        if(currentVisitedDateCheck) {
-                            await doc.ref.update({
-                                ['lastVisited.' + prop]: FieldValue.delete()
-                            });
-                            updated1 = true;
+            const data = doc.data();
+            if (data) {
+                if (data.lastViisited && Object.keys(data.lastVisited).length > 0) {
+                    let updated1 = false;
+                    for (var prop in data.lastVisited) {
+                            let currentVisitedDateCheck = ((new Date().getTime() - (parseInt(data.lastVisited[prop].checkInTime._seconds ? data.lastVisited[prop].checkInTime._seconds : data.lastVisited[prop].checkInTime.seconds) * 1000)) > (86400000 * 7))
+                            functions.logger.log(`TTL timestamp from lastVisited.uid.checkInTime: ${data.lastVisited[prop].checkInTime}`);
+                            //Checking lastVisited object for outdataed data. (x > 7 days)
+                            if(currentVisitedDateCheck) {
+                                await doc.ref.update({
+                                    ['lastVisited.' + prop]: FieldValue.delete()
+                                });
+                                updated1 = true;
+                        }
                     }
+                    DeletedOpts['lastVisited'] = updated1;
                 }
-                DeletedOpts['lastVisited'] = updated1;
-            }
-            if (doc.data().checkIn) {
-                let updated2 = false;
-                let checkInDateCheck = ((new Date().getTime() - (parseInt(doc.data().checkIn.checkInTime._seconds ? doc.data().checkIn.checkInTime._seconds : doc.data().checkIn.checkInTime.seconds) * 1000)) > 86400000);
-                //Checking checkedIn object for outdated data. (x > 1 days)
-                if(checkInDateCheck) {
-                    await doc.ref.update({
-                        checkIn: FieldValue.delete()
-                    });
-                    updated2 = true;
+                if (data.checkIn && Object.keys(data.checkIn).length > 0) {
+                    let updated2 = false;
+                    let checkInDateCheck = ((new Date().getTime() - (parseInt(data.checkIn.checkInTime._seconds ? data.checkIn.checkInTime._seconds : data.checkIn.checkInTime.seconds) * 1000)) > 86400000);
+                    functions.logger.log(`TTL timestamp from checkIn.checkInTime: ${data.checkIn.checkInTime}`);
+                    //Checking checkedIn object for outdated data. (x > 1 days)
+                    if(checkInDateCheck) {
+                        await doc.ref.update({
+                            checkIn: FieldValue.delete()
+                        });
+                        updated2 = true;
+                    }
+                    DeletedOpts['checkIn'] = updated2;
                 }
-                DeletedOpts['checkIn'] = updated2;
-            }
-            DeletedObj = {
-                user: doc.email,
-                timeUpdated: new Date(),
-                wasUpdated: DeletedOpts
+                DeletedObj = {
+                    user: data.email,
+                    timeUpdated: new Date(),
+                    wasUpdated: DeletedOpts
+                }
             }
         });
-
-        functions.logger.log(JSON.stringify(DeletedObj));
+        functions.logger.log(`Data Object: ${JSON.stringify(DeletedObj)}; **Where: TTL`);
     })
     .catch((error) => {
         functions.logger.log('TTL errored out with a Firebase Error: ' +  error.message);
@@ -540,7 +549,7 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
     const take = parseInt(body.take); //parseInt(request.query.take) 
     try {
         const userData = (await db.collection('users').doc(email).get()).data();
-        const userFriends = Object.keys(userData.friends).filter(friend => userData.friends[friend] == true);
+        const userFriends = userData.friends && Object.keys(userData.friends).length > 0 ? Object.keys(userData.friends).filter(friend => userData.friends[friend] == true) : [];
         let friendUserFeed = [];
         let currentUserFeed = await db.collection("feed")
         .doc(email)
@@ -553,7 +562,7 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
                 let lastVisited = feedData.lastVisited ? Object.keys(feedData.lastVisited).length : 0;
                 let userTimeline = feedData.timeline ? feedData.timeline.length : 0;
                 if (userTimeline > 0) {
-                    timeline = [...timeline, ...feedData.timeline];
+                    timeline = feedData.timeline;
                 }
                 if (checkIn > 0) {
                     if (
@@ -601,7 +610,7 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
         if (userFriends.length > 0) {
             for (let i = 0; i < userFriends.length; i++) {
                 let friend = userFriends[i];
-                await db.collection("feed")
+                db.collection("feed")
                 .doc(friend)
                 .get()
                 .then((doc) =>  { 
@@ -611,7 +620,7 @@ exports.getUserFeed = functions.https.onRequest(async (request, response) => {
                         let lastVisited = friendData.lastVisited ? Object.keys(friendData.lastVisited).length : 0;
                         let friendTimeline = friendData.timeline ? friendData.timeline.length : 0;
                         if (friendTimeline > 0) {
-                            friendUserFeed = [...friendUserFeed, ...friendData.timeline];
+                            friendUserFeed = [...friendData.timeline];
                         }
                         if (checkIn > 0) {
                             if (
