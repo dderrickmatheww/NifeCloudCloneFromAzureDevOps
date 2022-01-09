@@ -96,33 +96,30 @@ const feedSchema = {
 exports.checkInForBuisness = functions.https.onRequest(async (request, response) => {
     const body = request.body ? JSON.parse(request.body) : {};
     const buisnessUID = body ? body.buisnessUID : false;
-    const userArr = [];
     if (buisnessUID) {
         try {
-            (await db.collection('feed')
-            .get())
-            .then((userRef) => {
-                userRef.forEach(doc => {
-                    let data = doc.data();
-                    let { checkIn, username } = data;
-                    let { buisnessUID: buisnessUidDB, checkInTime, privacy } = checkIn;
-                    if(data && buisnessUidDB) {
-                        if(buisnessUidDB == buisnessUID) {
-                            userArr.push({
-                                checkIn: checkIn,
-                                user: {
-                                    email: username,
-                                    checkInTime: checkInTime,
-                                    privacy: privacy
-                                }
-                            });
-                        }
+            const userRef = await db.collection('feed').get();
+            const userArr = [];
+            userRef.forEach((doc) => {
+                let data = doc.data();
+                let { checkIn, username } = data;
+                let { buisnessUID: buisnessUidDB, checkInTime, privacy } = checkIn;
+                if(data && buisnessUidDB) {
+                    if(buisnessUidDB == buisnessUID) {
+                        userArr.push({
+                            checkIn: checkIn,
+                            user: {
+                                email: username,
+                                checkInTime: checkInTime,
+                                privacy: privacy
+                            }
+                        });
                     }
-                    functions.logger.log(`Has a business: ${JSON.stringify(buisnessUID)}`);
-                    functions.logger.log(`Line 163 - Data Object: ${JSON.stringify(userArr)}`);
-                    response.json({ 'result': userArr });
-                });
+                }
             });
+            functions.logger.log(`Has a business: ${JSON.stringify(buisnessUID)}`);
+            functions.logger.log(`Line 123 - Data Object: ${JSON.stringify(userArr)}`);
+            response.json({ 'result': userArr });
         }
         catch (error) {
             functions.logger.log(`Error: ${error.message}`);
