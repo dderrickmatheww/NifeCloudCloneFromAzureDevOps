@@ -93,114 +93,177 @@ const feedSchema = {
 //Location Related
 //**************** */
 
-exports.checkInCount = functions.https.onRequest(async (request, response) => {
-    let body = request.body ? JSON.parse(request.body) : {};
-    let buisnessUID = body ? body.buisnessUID : false;
-    //let userLocation = body ? body.userLocation : false;
-    let userArr = [];
-    let businessesArr = [];
-    let checkInCount = {};
-    let checkInArray = [];
-    let businessTimeline = [];
-    let userRef = await db.collection('feed').get();
-    if (body && userRef) {
-        if (buisnessUID) {
-            userRef.forEach(doc => {
-                let data = doc.data();
-                if(data && data.checkIn) {
-                    if(data.checkIn.buisnessUID == buisnessUID) {
-                        userArr.push(data.checkIn.buisnessUID = {
-                            checkIn: data.checkIn,
-                            user: {
-                                email: data.username,
-                                checkInTime: data.checkIn.checkInTime,
-                                privacy: data.checkIn.privacy
-                            }
-                        });
+exports.checkInForBuisness = functions.https.onRequest(async (request, response) => {
+    const body = request.body ? JSON.parse(request.body) : {};
+    const buisnessUID = body ? body.buisnessUID : false;
+    const userArr = [];
+    if (buisnessUID) {
+        try {
+            (await db.collection('feed')
+            .get())
+            .then((userRef) => {
+                userRef.forEach(doc => {
+                    let data = doc.data();
+                    let { checkIn, username } = data;
+                    let { buisnessUID: buisnessUidDB, checkInTime, privacy } = checkIn;
+                    if(data && buisnessUidDB) {
+                        if(buisnessUidDB == buisnessUID) {
+                            userArr.push({
+                                checkIn: checkIn,
+                                user: {
+                                    email: username,
+                                    checkInTime: checkInTime,
+                                    privacy: privacy
+                                }
+                            });
+                        }
                     }
-                }
+                    functions.logger.log(`Has a business: ${JSON.stringify(buisnessUID)}`);
+                    functions.logger.log(`Line 163 - Data Object: ${JSON.stringify(userArr)}`);
+                    response.json({ 'result': userArr });
+                });
             });
-            functions.logger.log(`Data Object: ${JSON.stringify(userArr)}`);
+        }
+        catch (error) {
+            functions.logger.log(`Error: ${error.message}`);
             response.json({ 'result': userArr });
         }
-        else {
-            userRef.forEach(doc => {
-                let data = doc.data();
-                if (data) {
-                    if (data.isBusiness) {
-                        data.timeline.forEach((status) => {
-                            businessTimeline.push(status);
-                        });
-                    }
-                    if (data.checkIn && data.checkIn.buisnessUID) {
-                        // var withinRadius = (checkIn, userLocation, boolean) => {
-                        //     var isWithinRadius;
-                        //     let checkInLat = parseInt(checkIn.latAndLong.split(',')[0]);
-                        //     let checkInLong = parseInt(checkIn.latAndLong.split(',')[1]);
-                        //     let userLat = parseInt(userLocation.coords.latitude);
-                        //     let userLong = parseInt(userLocation.coords.longitude);
-                        //     if(boolean) {
-                        //         isWithinRadius = geolib.isPointWithinRadius(
-                        //             {
-                        //                 latitude: checkInLat,
-                        //                 longitude: checkInLong
-                        //             }, 
-                        //             {
-                        //                 latitude: userLat,
-                        //                 longitude: userLong
-                        //             }, 
-                        //             100
-                        //         ); 
-                        //         return isWithinRadius;
-                        //     }
-                        //     else {
-                        //         isWithinRadius = geolib.isPointWithinRadius(
-                        //             {
-                        //                 latitude: checkInLat,
-                        //                 longitude: checkInLong
-                        //             }, 
-                        //             {
-                        //                 latitude: userLat,
-                        //                 longitude: userLong
-                        //             }, 
-                        //             32187
-                        //         ); 
-                        //         return isWithinRadius;
-                        //     }
-                        // }
-                        // if(withinRadius(data.checkIn, userLocation, false)) {
-                        userArr.push(data.checkIn.buisnessUID = {
-                            checkIn: data.checkIn,
-                            user: {
-                                email: data.username,
-                                checkInTime: data.checkIn.checkInTime,
-                                privacy: data.checkIn.privacy
-                            }
-                        });
-                        if(!businessesArr.includes(data.checkIn.buisnessUID)) {
-                            businessesArr.push(data.checkIn.buisnessUID);
-                        }
-                        // }
-                    }
+    }
+    else {
+        functions.logger.log(`Error: no value found for variable buisnessUID`);
+        response.json({ 'result': userArr });
+    }
+});
+
+exports.whatsPoppinFeed = functions.https.onRequest(async (request, response) => {
+    const body = request.body ? JSON.parse(request.body) : false;
+    const userLocation = body ? body.userLocation : false;
+    if (body && userLocation) {
+        const userArr = [];
+        const businessesArr = [];
+        const checkInArray = [];
+        const businessTimeline = [];
+        try {
+            const withinRadius = ({ checkIn, userLocation, boolean, location }) => {
+                var isWithinRadius;
+                let checkInLat = checkIn ? parseInt(checkIn.latAndLong.split(',')[0]) : parseInt(location.coords.latitude);
+                let checkInLong = checkIn ? parseInt(checkIn.latAndLong.split(',')[1]) : parseInt(location.coords.longitude);
+                let userLat = parseInt(userLocation.coords.latitude);
+                let userLong = parseInt(userLocation.coords.longitude);
+                if(boolean) {
+                    isWithinRadius = geolib.isPointWithinRadius(
+                        {
+                            latitude: checkInLat,
+                            longitude: checkInLong
+                        }, 
+                        {
+                            latitude: userLat,
+                            longitude: userLong
+                        }, 
+                        100
+                    ); 
+                    return isWithinRadius;
                 }
-            });
-            if (businessesArr.length > 0) {
-                businessesArr.forEach((element) => {
-                    checkInCount =  {
-                        checkedIn: 0,
-                        buisnessUID: element,
-                        users: [],
-                        buisnessData: null
+                else {
+                    isWithinRadius = geolib.isPointWithinRadius(
+                        {
+                            latitude: checkInLat,
+                            longitude: checkInLong
+                        }, 
+                        {
+                            latitude: userLat,
+                            longitude: userLong
+                        }, 
+                        32187
+                    ); 
+                    return isWithinRadius;
+                }
+            }
+            const userRef = await db.collection('feed').get();
+            try {
+                userRef.forEach((doc) => {
+                    const data = doc.data();
+                    const { isBusiness, timeline, checkIn, username } = data;
+                    const { buisnessUID, checkInTime, privacy } = checkIn;
+                    if (data) {
+                        if (isBusiness && timeline.length > 0) {
+                            functions.logger.log(`Inside if statement - 190 - Noteable Variables - timeline: ${JSON.stringify(timeline)}`);
+                            timeline.forEach((status) => {
+                                let { location } = status;
+                                if (withinRadius({ location, userLocation, boolean: false })) {
+                                    functions.logger.log(`Inside if statement - 194 - Noteable Variables - timeline: ${JSON.stringify(timeline)}`);
+                                    businessTimeline.push(status);
+                                }
+                            });
+                        }
+                        if (Object.keys(checkIn).length > 0 && buisnessUID && withinRadius({ checkIn, userLocation, boolean: false })) {
+                            functions.logger.log(`Inside if statement - 199 - Noteable Variables - checkIn: ${JSON.stringify(checkIn)}`);
+                            userArr.push({
+                                checkIn: checkIn,
+                                user: {
+                                    email: username,
+                                    checkInTime: checkInTime,
+                                    privacy: privacy
+                                }
+                            });
+                            if(!businessesArr.includes(buisnessUID)) {
+                                functions.logger.log(`Inside if statement - 210 - Noteable Variables - buisnessUID: ${JSON.stringify(buisnessUID)}`);
+                                businessesArr.push(buisnessUID);
+                            }
+                        }
+                        functions.logger.log(`Line 214 - Noteable Variables - data: ${JSON.stringify(data)}`);
                     }
-                    const checkInUsers = userArr.filter(index => index.checkIn && index.checkIn.buisnessUID == element);
-                    checkInUsers.forEach((user) => {
-                        checkInCount['checkedIn']++;
-                        checkInCount['users'].push(user.userEmail ? user.userEmail : user.displayName);
-                        checkInCount['buisnessData'] = user.checkIn;
-                    });
-                    checkInArray.push(checkInCount);
                 });
-                businessTimeline.sort(function innerSort(a, b) {
+                functions.logger.log(`Line 217
+                - Noteable Variables - 
+                businessesArr: ${JSON.stringify(businessesArr)} 
+                &&&&& 
+                checkInArray: ${JSON.stringify(businessTimeline)}
+                &&&&&
+                userArr: ${JSON.stringify(userArr)}`);
+            }
+            catch(error) {
+                functions.logger.log(`Line 226 - Error: ${error.message}`);
+                functions.logger.log(`Line 227
+                - Noteable Variables - 
+                businessesArr: ${JSON.stringify(businessesArr)} 
+                &&&&& 
+                checkInArray: ${JSON.stringify(businessTimeline)}
+                &&&&&
+                userArr: ${JSON.stringify(userArr)}`);
+            }
+            try {  
+                if (businessesArr.length > 0) {
+                    businessesArr.forEach((busUID) => {
+                        const checkInCount =  {
+                            checkedIn: 0,
+                            buisnessUID: busUID,
+                            users: [],
+                            buisnessData: null
+                        }
+                        const filUserArr = userArr.filter(index => index.checkIn && index.checkIn.buisnessUID == busUID);
+                        filUserArr.forEach((user) => {
+                            const { userEmail, displayName, checkIn } = user;
+                            const { checkInTime } = checkIn;
+                            checkInCount['checkedIn']++;
+                            checkInCount['users'].push(userEmail ? userEmail : displayName);
+                            checkInCount['buisnessData'] = checkIn;
+                            checkInCount['time'] = checkInTime;
+                        });
+                        functions.logger.log(`Line 253 - Noteable Variables - checkInCount: ${JSON.stringify(checkInCount)} &&&&& filUserArr: ${JSON.stringify(filUserArr)}`);
+                        checkInArray.push(checkInCount);
+                    });
+                    functions.logger.log(`Line 256 - Noteable Variables - businessesArr: ${JSON.stringify(businessesArr)} &&&&& checkInArray: ${JSON.stringify(checkInArray)}`);
+                }
+                functions.logger.log(`Line 258 - Noteable Variables - businessesArr: ${JSON.stringify(businessesArr)} &&&&& checkInArray: ${JSON.stringify(checkInArray)}`);
+            }
+            catch (error) {
+                functions.logger.log(`Line 260 - Error: ${error.message}`);
+                functions.logger.log(`Line 262 - Noteable Variables - businessesArr: ${JSON.stringify(businessesArr)} &&&&& checkInArray: ${JSON.stringify(checkInArray)}`);
+            }
+            functions.logger.log(`Line 264 - Noteable Variables - businessTimeline: ${JSON.stringify(businessTimeline)} &&&&& userArr: ${JSON.stringify(userArr)}`);
+            if (businessTimeline.length > 0) {
+                businessTimeline.sort((a, b) => {
                     let key = "time";
                     let order = "desc";
                     if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
@@ -219,12 +282,13 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                     comparison = -1;
                     }
                     return (
-                    (order === 'desc') ? (comparison * -1) : comparison
+                        (order === 'desc') ? (comparison * -1) : comparison
                     );
                 });
             }
+            functions.logger.log(`Line 289 - Noteable Variables - businessTimeline: ${JSON.stringify(businessTimeline)} &&&&& checkInArray: ${JSON.stringify(checkInArray)}`);
             if (checkInArray.length > 0) {
-                checkInArray.sort(function innerSort(a, b) {
+                checkInArray.sort((a, b) => {
                     let key = "checkedIn";
                     let order = "desc";
                     if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
@@ -247,13 +311,42 @@ exports.checkInCount = functions.https.onRequest(async (request, response) => {
                     );
                 });
             }
-            functions.logger.log(`Data Object: ${JSON.stringify({ checkInArray, businessTimeline })}`);
-            response.json({ 'result': { checkInArray, businessTimeline } });
+            try {
+                const combinedArray = [...checkInArray, ...businessTimeline]
+                .sort((a, b) => {
+                    let key = "time";
+                    let order = "desc";
+                    if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+                        // property doesn't exist on either object
+                        return 0;
+                    }
+                    const varA = (typeof a[key] === 'string')
+                    ? a[key].toUpperCase() : a[key];
+                    const varB = (typeof b[key] === 'string')
+                    ? b[key].toUpperCase() : b[key];
+                
+                    let comparison = 0;
+                    if (varA > varB) {
+                    comparison = 1;
+                    } else if (varA < varB) {
+                        comparison = -1;
+                    }
+                    return (
+                        (order === 'desc') ? (comparison * -1) : comparison
+                    );
+                });
+                functions.logger.log(`Line 338 - Data Object: ${JSON.stringify({ checkInArray, businessTimeline, combinedArray })}`);
+                response.json({ 'result': { checkInArray, businessTimeline, combinedArray } });
+            }
+            catch (error) {
+                functions.logger.log(`Line 342 - Error: ${error.message}`);
+                functions.logger.log(`Line 344 - Noteable Variables - checkInArray: ${JSON.stringify(checkInArray)} &&&&& businessTimeline: ${JSON.stringify(businessTimeline)}`);
+            }
         }
-    }
-    else {
-        functions.logger.log(`Data Object: ${JSON.stringify({ checkInArray, businessTimeline })}`);
-        response.json({ 'result': { checkInArray: checkInArray, businessTimeline: businessTimeline } });
+        catch (error) {
+            functions.logger.log(`Line 347 - Error: ${error.message}`);
+            functions.logger.log(`Line 348 - Noteable Variables - businessesArr: ${JSON.stringify(businessesArr)} &&&&& checkInArray: ${JSON.stringify(checkInArray)}`);
+        }
     }
 });
 
