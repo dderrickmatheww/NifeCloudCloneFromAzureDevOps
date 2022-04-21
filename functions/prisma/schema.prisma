@@ -80,7 +80,7 @@ model users {
   bio                  String?                @db.VarChar
   dateOfBirth          String?                @db.VarChar
   displayName          String?                @db.VarChar
-  email                String?                @db.VarChar
+  email                String?                @unique(map: "unique_email") @db.VarChar
   expoPushToken        String?                @db.VarChar
   gender               String?                @db.VarChar
   phoneNumber          String?                @db.VarChar

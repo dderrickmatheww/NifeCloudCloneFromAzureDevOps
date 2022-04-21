@@ -5,7 +5,7 @@
     "lint": "eslint .",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
-    "start": "npm run shell",
+    "start": "npx functions-framework --target=index",
     "deploy": "firebase deploy --only functions",
     "postinstall": "npx prisma generate",
     "logs": "firebase functions:log"
@@ -25,6 +25,7 @@
     "xhr2": "^0.2.0"
   },
   "devDependencies": {
+    "@google-cloud/functions-framework": "^3.1.0",
     "eslint": "^5.12.0",
     "eslint-plugin-promise": "^4.0.1",
     "firebase-functions-test": "^0.2.0",
