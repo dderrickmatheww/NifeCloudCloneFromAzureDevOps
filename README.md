@@ -8,6 +8,9 @@ Node.js application that runs cloud related functions
 * run `npx db pull && npx prisma generate`
 * run `npm start` in your terminal from the `functions` folder.
 
+## BEFORE DEPLOYMENT
+* Make sure you comment out the `index` function in `module.exports` in the `root/functions/index.js` file
+
 # IMPORTANT
 When you update the SQL schema make sure to run, before you run the server or deploy:
 ```

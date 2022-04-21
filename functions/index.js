@@ -36,18 +36,21 @@ const getUser = functions.https.onRequest(async (request, response) => {
 });
 
 const updateUser = functions.https.onRequest(async (request, response) => {
-    functions.logger.log(`body: ${request.body}`);
-    const { email } = request.body;
+    const { user } = request.body;
     try {
-        const user = await prisma.users.upsert({
+        const res = await prisma.users.upsert({
             where: {
-                email
+                email: user.email
             },
-            update: request.body,
-            create: request.body,
+            update: {
+                ...user
+            },
+            create: {
+                ...user
+            },
         })
         response.json(user);
-        return user
+        return res
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);

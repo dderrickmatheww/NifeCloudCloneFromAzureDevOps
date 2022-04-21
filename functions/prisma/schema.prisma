@@ -71,6 +71,7 @@ model user_posts {
   businessId  Int?
   image       String?     @db.VarChar
   created     DateTime?   @db.Timestamp(6)
+  isFlagged   String?     @db.Bit(1)
   businesses  businesses? @relation(fields: [businessId], references: [businessId], onDelete: NoAction, onUpdate: NoAction)
   users       users?      @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
@@ -94,6 +95,8 @@ model users {
   lastLogin            DateTime?              @db.Timestamp(6)
   created              DateTime?              @db.Timestamp(6)
   businessUID          String?                @db.VarChar
+  userid               Int                    @default(autoincrement())
+  isFlagged            String?                @db.Bit(1)
   business_events      business_events[]
   businesses           businesses[]
   user_favorite_places user_favorite_places[]
