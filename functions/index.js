@@ -12,8 +12,10 @@ const prisma = new PrismaClient()
 //************ */
 
 const getUser = functions.https.onRequest(async (request, response) => {
+
     functions.logger.log(`body: ${request.body}`);
     const { email } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
     try {
         const user = await prisma.users.findUnique({
             where: {
