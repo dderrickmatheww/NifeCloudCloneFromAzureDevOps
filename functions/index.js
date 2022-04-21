@@ -12,7 +12,6 @@ const prisma = new PrismaClient()
 //************ */
 
 const getUser = functions.https.onRequest(async (request, response) => {
-
     functions.logger.log(`body: ${request.body}`);
     const { email } = request.body;
     // const {uuid} = verifyToken(req.headers.authorization)
@@ -38,6 +37,95 @@ const getUser = functions.https.onRequest(async (request, response) => {
 const updateUser = functions.https.onRequest(async (request, response) => {
     functions.logger.log(`body: ${request.body}`);
     const { email } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
+    try {
+        const user = await prisma.users.upsert({
+            where: {
+                email
+            },
+            update: request.body,
+            create: request.body,
+        })
+        response.json(user);
+        return user
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+//************ */
+//Post Related
+//************ */
+
+const getPostById = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`body: ${request.body}`);
+    const { userId } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
+    try {
+        const user = await prisma.user_posts.findUnique({
+            where: {
+                userId
+            }
+        })
+        response.json(user);
+        return user
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const getPosts = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`body: ${request.body}`);
+    const { email } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
+    try {
+        const user = await prisma.user_posts.findMany({
+            where: {
+                email
+            },
+            include: {
+                user_favorite_places: true,
+                user_friends: true,
+            }
+        })
+        response.json(user);
+        return user
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const updatePostById = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`body: ${request.body}`);
+    const { email } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
+    try {
+        const user = await prisma.users.upsert({
+            where: {
+                email
+            },
+            update: request.body,
+            create: request.body,
+        })
+        response.json(user);
+        return user
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const deletePostById = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`body: ${request.body}`);
+    const { email } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
     try {
         const user = await prisma.users.upsert({
             where: {
