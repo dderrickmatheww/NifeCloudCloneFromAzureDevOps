@@ -89,14 +89,14 @@ model users {
   sexualOrientation    String?                @db.VarChar
   userUID              String?                @db.VarChar
   businessId           Int?
-  latitude             String?                @db.VarChar
-  longitude            String?                @db.VarChar
   lastModified         DateTime?              @db.Timestamp(6)
   lastLogin            DateTime?              @db.Timestamp(6)
   created              DateTime?              @db.Timestamp(6)
   businessUID          String?                @db.VarChar
   userid               Int                    @default(autoincrement())
   isFlagged            String?                @db.Bit(1)
+  latitude             Float?
+  longitude            Float?
   business_events      business_events[]
   businesses           businesses[]
   user_favorite_places user_favorite_places[]

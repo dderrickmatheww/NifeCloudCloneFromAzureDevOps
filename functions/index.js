@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const db = admin.firestore();
 const { PrismaClient } = require('@prisma/client')
+const {getBusinessesNearby} = require("./fourSquare");
 const prisma = new PrismaClient()
 
 
@@ -13,7 +14,7 @@ const prisma = new PrismaClient()
 
 const getUser = functions.https.onRequest(async (request, response) => {
 
-    functions.logger.log(`body: ${request.body}`);
+    functions.logger.log(`getUser FIRED!`);
     const { email } = request.body;
     // const {uuid} = verifyToken(req.headers.authorization)
     try {
@@ -27,7 +28,6 @@ const getUser = functions.https.onRequest(async (request, response) => {
             }
         })
         response.json(user);
-        return user
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
@@ -37,6 +37,7 @@ const getUser = functions.https.onRequest(async (request, response) => {
 
 const updateUser = functions.https.onRequest(async (request, response) => {
     const { user } = request.body;
+    functions.logger.log(`updateUser FIRED!`);
     try {
         const res = await prisma.users.upsert({
             where: {
@@ -49,8 +50,7 @@ const updateUser = functions.https.onRequest(async (request, response) => {
                 ...user
             },
         })
-        response.json(user);
-        return res
+        response.json(res);
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
@@ -62,9 +62,11 @@ const updateUser = functions.https.onRequest(async (request, response) => {
 const index = (req, res) => {
     switch (req.path) {
         case '/getUser':
-            return getUser(req, res)
+            return  getUser(req, res)
         case '/updateUser':
             return updateUser(req, res)
+        case '/getBusinessesNearby':
+            return getBusinessesNearby(req, res)
         default:
             res.send('function not defined')
     }
@@ -72,5 +74,6 @@ const index = (req, res) => {
 
 module.exports = {
     index,
-    getUser
+    getUser,
+    getBusinessesNearby,
 }
