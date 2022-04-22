@@ -1,7 +1,6 @@
 const functions = require('firebase-functions');
 const { PrismaClient } = require('@prisma/client')
-const {getBusinessesNearby} = require("./fourSquare");
-const {validateToken} = require("./src/validation");
+const {validateToken} = require("./validation");
 const prisma = new PrismaClient()
 
 
@@ -60,5 +59,5 @@ const updateUser = functions.https.onRequest(async (request, response) => {
 
 module.exports = {
     getUser,
-    getBusinessesNearby,
+    updateUser,
 }
