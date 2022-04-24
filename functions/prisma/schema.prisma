@@ -17,38 +17,38 @@ model business_events {
   eventtype    eventtype?
   description  String?     @db.VarChar
   businesses   businesses? @relation(fields: [businessId], references: [businessId], onDelete: NoAction, onUpdate: NoAction)
-  users        users?      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  users        users?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model businesses {
-  userId          Int?
-  businessUID     String            @unique @db.VarChar
-  lastModified    DateTime?         @db.Timestamp(6)
-  created         DateTime?         @db.Timestamp(6)
-  address         String?           @db.VarChar
-  email           String?           @db.VarChar
-  displayName     String?           @db.VarChar
-  phoneNumber     String?           @db.VarChar
-  latitude        String?           @db.VarChar
-  longitude       String?           @db.VarChar
-  ownerName       String?           @db.VarChar
-  photoSource     String?           @db.VarChar
-  lastLogin       DateTime?         @db.Timestamp(6)
-  businessId      Int               @id @default(autoincrement())
-  users           users?            @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  business_events business_events[]
-  user_posts      user_posts[]
+  userId               Int?
+  uuid                 String                 @unique(map: "businesses_businessUID_key") @db.VarChar
+  lastModified         DateTime?              @db.Timestamp(6)
+  created              DateTime?              @db.Timestamp(6)
+  address              String?                @db.VarChar
+  email                String?                @db.VarChar
+  displayName          String?                @db.VarChar
+  phoneNumber          String?                @db.VarChar
+  latitude             String?                @db.VarChar
+  longitude            String?                @db.VarChar
+  ownerName            String?                @db.VarChar
+  photoSource          String?                @db.VarChar
+  lastLogin            DateTime?              @db.Timestamp(6)
+  businessId           Int                    @id @default(autoincrement())
+  users                users?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business_events      business_events[]
+  user_check_ins       user_check_ins[]
+  user_favorite_places user_favorite_places[]
+  user_posts           user_posts[]
 }
 
 model user_favorite_places {
-  placesId     Int       @id @default(autoincrement())
-  userId       Int?
-  businessUID  String    @db.VarChar
-  businessId   Int?
-  displayName  String?   @db.VarChar
-  lastModified DateTime? @db.Timestamp(6)
-  created      DateTime? @db.Timestamp(6)
-  users        users?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  id         Int         @id @default(autoincrement())
+  created    DateTime?   @db.Timestamp(6)
+  user       String?     @db.VarChar
+  business   String?     @db.VarChar
+  businesses businesses? @relation(fields: [business], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
+  users      users?      @relation(fields: [user], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model user_friends {
@@ -59,7 +59,7 @@ model user_friends {
   isBlocked    String?   @default(dbgenerated("'0'::\"bit\"")) @db.Bit(1)
   lastModified DateTime? @db.Timestamp(6)
   created      DateTime? @db.Timestamp(6)
-  users        users?    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  users        users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model user_posts {
@@ -73,11 +73,11 @@ model user_posts {
   created     DateTime?   @db.Timestamp(6)
   isFlagged   String?     @db.Bit(1)
   businesses  businesses? @relation(fields: [businessId], references: [businessId], onDelete: NoAction, onUpdate: NoAction)
-  users       users?      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  users       users?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model users {
-  userId               Int                    @id @default(autoincrement())
+  id                   Int                    @id @default(autoincrement())
   bio                  String?                @db.VarChar
   dateOfBirth          String?                @db.VarChar
   displayName          String?                @db.VarChar
@@ -87,21 +87,30 @@ model users {
   phoneNumber          String?                @db.VarChar
   photoSource          String?                @db.VarChar
   sexualOrientation    String?                @db.VarChar
-  userUID              String?                @db.VarChar
+  uuid                 String?                @unique(map: "user_unique_uuid") @db.VarChar
   businessId           Int?
   lastModified         DateTime?              @db.Timestamp(6)
   lastLogin            DateTime?              @db.Timestamp(6)
   created              DateTime?              @db.Timestamp(6)
   businessUID          String?                @db.VarChar
-  userid               Int                    @default(autoincrement())
   isFlagged            String?                @db.Bit(1)
   latitude             Float?
   longitude            Float?
   business_events      business_events[]
   businesses           businesses[]
+  user_check_ins       user_check_ins[]
   user_favorite_places user_favorite_places[]
   user_friends         user_friends[]
   user_posts           user_posts[]
+}
+
+model user_check_ins {
+  id         Int         @id @default(autoincrement())
+  user       String?     @db.VarChar
+  business   String?     @db.VarChar
+  created    DateTime?   @db.Timestamp(6)
+  businesses businesses? @relation(fields: [business], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
+  users      users?      @relation(fields: [user], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
 }
 
 enum eventtype {

@@ -1,5 +1,5 @@
 const { getUser, updateUser } = require('./src/users');
-const { getPostById, getPosts, updatePostById, deletePostById, postsThatAreFlagged } = require('./src/posts');
+const { getPostById, getPosts, updatePostById, deletePostById, postsThatAreFlagged, postsThatAreFlaggedTest } = require('./src/posts');
 const { getBusinessesNearby } = require('./src/yelp');
 
 // eslint-disable-next-line consistent-return
@@ -19,6 +19,8 @@ const index = (req, res) => {
             return updatePostById(req, res);
         case '/deletePostById':
             return deletePostById(req, res);
+        case '/postsThatAreFlaggedTest':
+            return postsThatAreFlaggedTest(req, res);
         //Business
         case '/getBusinessesNearby':
             return getBusinessesNearby(req, res);
