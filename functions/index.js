@@ -1,6 +1,10 @@
-const { getUser, updateUser } = require('./src/users');
-const { getPostById, getPosts, updatePostById, deletePostById, postsThatAreFlagged, postsThatAreFlaggedTest } = require('./src/posts');
-const { getBusinessesNearby } = require('./src/yelp');
+const { getPostById, getPosts, updatePostById, deletePostById, postsThatAreFlagged, postsThatAreFlaggedTest } = require('./src/db/posts');
+const admin = require('firebase-admin');
+admin.initializeApp();
+const {getUser, updateUser, updateOrDeleteFavorites} = require('./src/db/users')
+const {getBusinessCheckIns, getBusiness} = require("./src/db/businesses");
+const {getBusinessesNearby} = require('./src/yelp')
+
 
 // eslint-disable-next-line consistent-return
 const index = (req, res) => {
@@ -24,6 +28,12 @@ const index = (req, res) => {
         //Business
         case '/getBusinessesNearby':
             return getBusinessesNearby(req, res);
+        case '/getBusiness':
+            return getBusiness(req, res)
+        case '/getBusinessCheckIns':
+            return getBusinessCheckIns(req, res)
+        case '/updateOrDeleteFavorites':
+            return updateOrDeleteFavorites(req, res)
         default:
             res.send('function not defined');
     }
@@ -32,6 +42,10 @@ const index = (req, res) => {
 module.exports = {
     index,
     getUser,
+    updateUser,
     getBusinessesNearby,
-    postsThatAreFlagged
+    postsThatAreFlagged,
+    getBusinessCheckIns,
+    getBusiness,
+    updateOrDeleteFavorites
 }

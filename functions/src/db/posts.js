@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const { PrismaClient } = require('@prisma/client')
-const { validateToken } = require("./validation");
+const { validateToken } = require("../validation");
 const nodemailer = require('nodemailer');
 const prisma = new PrismaClient();
 const transporter = nodemailer.createTransport({

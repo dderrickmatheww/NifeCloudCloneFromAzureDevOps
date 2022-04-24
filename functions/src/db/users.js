@@ -1,12 +1,9 @@
 const functions = require('firebase-functions');
 const { PrismaClient } = require('@prisma/client')
-const { validateToken } = require("./validation");
-const prisma = new PrismaClient();
 
+const {validateToken} = require("../validation");
+const prisma = new PrismaClient()
 
-//************ */
-//User Related
-//************ */
 
 const getUser = functions.https.onRequest(async (request, response) => {
     functions.logger.log(`getUser FIRED!`);
@@ -55,9 +52,40 @@ const updateUser = functions.https.onRequest(async (request, response) => {
     }
 });
 
+const updateOrDeleteFavorites = functions.https.onRequest(async (request, response) => {
+    const { user, business, isAdding, id } = request.body;
+    functions.logger.log(`updateOrDeleteFavorites FIRED!`);
+    try {
+        await validateToken()
+        if(isAdding) {
+            const res = await prisma.user_favorite_places.create({
+                data:{
+                    business,
+                    user,
+                    created: new Date()
+                }
+            })
+            response.json(res);
+        } else {
+            const res = await prisma.user_favorite_places.delete({
+                where: {
+                    id
+                },
+            })
+            response.json(res);
+        }
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+
 
 
 module.exports = {
     getUser,
     updateUser,
+    updateOrDeleteFavorites,
 }
