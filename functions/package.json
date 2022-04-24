@@ -17,7 +17,7 @@
   "dependencies": {
     "0s": "^1.0.0",
     "@prisma/client": "^3.12.0",
-    "cors": "^2.8.5",
+    "axios": "^0.26.1",
     "expo-server-sdk": "^3.6.0",
     "firebase-admin": "^9.9.0",
     "firebase-functions": "^3.14.1",
