@@ -18,6 +18,8 @@ const getUser = functions.https.onRequest(async (request, response) => {
             include:{
                 user_favorite_places: true,
                 user_friends: true,
+                user_check_ins: true,
+                user_posts: true
             }
         })
         response.json(user);
@@ -43,6 +45,12 @@ const updateUser = functions.https.onRequest(async (request, response) => {
             create: {
                 ...user
             },
+            include:{
+                user_favorite_places: true,
+                user_friends: true,
+                user_check_ins: true,
+                user_posts: true
+            }
         })
         response.json(res);
     }
@@ -63,6 +71,9 @@ const updateOrDeleteFavorites = functions.https.onRequest(async (request, respon
                     business,
                     user,
                     created: new Date()
+                },
+                include:{
+                    users: true
                 }
             })
             response.json(res);

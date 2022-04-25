@@ -52,14 +52,15 @@ model user_favorite_places {
 }
 
 model user_friends {
-  friendshipId Int       @id @default(autoincrement())
-  userId       Int?
-  friendId     Int
-  isFriend     String?   @default(dbgenerated("'1'::\"bit\"")) @db.Bit(1)
-  isBlocked    String?   @default(dbgenerated("'0'::\"bit\"")) @db.Bit(1)
-  lastModified DateTime? @db.Timestamp(6)
-  created      DateTime? @db.Timestamp(6)
-  users        users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                                 Int       @id @default(autoincrement())
+  userId                             Int?
+  friendId                           Int
+  isFriend                           String?   @default(dbgenerated("'1'::\"bit\"")) @db.Bit(1)
+  isBlocked                          String?   @default(dbgenerated("'0'::\"bit\"")) @db.Bit(1)
+  lastModified                       DateTime? @db.Timestamp(6)
+  created                            DateTime? @db.Timestamp(6)
+  users_user_friends_friendIdTousers users     @relation("user_friends_friendIdTousers", fields: [friendId], references: [id], onDelete: Cascade)
+  users                              users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model user_posts {
@@ -77,31 +78,32 @@ model user_posts {
 }
 
 model users {
-  id                   Int                    @id @default(autoincrement())
-  bio                  String?                @db.VarChar
-  dateOfBirth          String?                @db.VarChar
-  displayName          String?                @db.VarChar
-  email                String?                @unique(map: "unique_email") @db.VarChar
-  expoPushToken        String?                @db.VarChar
-  gender               String?                @db.VarChar
-  phoneNumber          String?                @db.VarChar
-  photoSource          String?                @db.VarChar
-  sexualOrientation    String?                @db.VarChar
-  uuid                 String?                @unique(map: "user_unique_uuid") @db.VarChar
-  businessId           Int?
-  lastModified         DateTime?              @db.Timestamp(6)
-  lastLogin            DateTime?              @db.Timestamp(6)
-  created              DateTime?              @db.Timestamp(6)
-  businessUID          String?                @db.VarChar
-  isFlagged            String?                @db.Bit(1)
-  latitude             Float?
-  longitude            Float?
-  business_events      business_events[]
-  businesses           businesses[]
-  user_check_ins       user_check_ins[]
-  user_favorite_places user_favorite_places[]
-  user_friends         user_friends[]
-  user_posts           user_posts[]
+  id                                        Int                    @id @default(autoincrement())
+  bio                                       String?                @db.VarChar
+  dateOfBirth                               String?                @db.VarChar
+  displayName                               String?                @db.VarChar
+  email                                     String?                @unique(map: "unique_email") @db.VarChar
+  expoPushToken                             String?                @db.VarChar
+  gender                                    String?                @db.VarChar
+  phoneNumber                               String?                @db.VarChar
+  photoSource                               String?                @db.VarChar
+  sexualOrientation                         String?                @db.VarChar
+  uuid                                      String?                @unique(map: "user_unique_uuid") @db.VarChar
+  businessId                                Int?
+  lastModified                              DateTime?              @db.Timestamp(6)
+  lastLogin                                 DateTime?              @db.Timestamp(6)
+  created                                   DateTime?              @db.Timestamp(6)
+  businessUID                               String?                @db.VarChar
+  isFlagged                                 String?                @db.Bit(1)
+  latitude                                  Float?
+  longitude                                 Float?
+  business_events                           business_events[]
+  businesses                                businesses[]
+  user_check_ins                            user_check_ins[]
+  user_favorite_places                      user_favorite_places[]
+  user_friends_user_friends_friendIdTousers user_friends[]         @relation("user_friends_friendIdTousers")
+  user_friends                              user_friends[]
+  user_posts                                user_posts[]
 }
 
 model user_check_ins {
@@ -109,6 +111,7 @@ model user_check_ins {
   user       String?     @db.VarChar
   business   String?     @db.VarChar
   created    DateTime?   @db.Timestamp(6)
+  isPrivate  String?     @db.Bit(1)
   businesses businesses? @relation(fields: [business], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
   users      users?      @relation(fields: [user], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
 }
