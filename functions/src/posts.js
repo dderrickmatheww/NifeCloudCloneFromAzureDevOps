@@ -10,6 +10,7 @@ const transporter = nodemailer.createTransport({
         pass: process.env.PASSWORD
     }
 });
+const testLocally = process.env.LocalTesting == "true";
 
 const getPostById = functions.https.onRequest(async (request, response) => {
     try {
@@ -34,26 +35,29 @@ const getPosts = functions.https.onRequest(async (request, response) => {
         // const {uuid} = validateToken(req.headers.authorization)
         functions.logger.log(`body: ${request.body}`);
         const { userId } = JSON.parse(request.body);
-        const userPosts = await prisma.user_posts.findMany({
+        const user = await prisma.users.findUnique({
             where: {
                 userId
+            },
+            include: {
+                user_posts: true
             }
         });
-        const friendPosts = await prisma.user_friends.findMany({
+        const userFriends = await prisma.user_friends.findMany({
             where: {
                 friendId: userId
             },
             include: {
                 users: {
                     include: {
-                        user_posts
+                        user_posts: true
                     }
                 }
             }
         });
-        const posts = [...userPosts, ...friendPosts];
-        console.log(posts);
-        response.json(userPosts);
+        const friends = userFriends.map(obj => obj.users);
+        const posts = [user, ...friends];
+        response.json(posts);
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
@@ -126,7 +130,6 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
 const postsThatAreFlaggedTest = functions.https.onRequest(async (request, response) => {
     try {
         const shouldEmail = true;
-        const testLocally = true;
         if (shouldEmail) {
             const userPosts = await prisma.user_posts.findMany({
                 where: {
@@ -186,7 +189,6 @@ const postsThatAreFlaggedTest = functions.https.onRequest(async (request, respon
 const postsThatAreFlagged = functions.pubsub.schedule('every 24 hours').onRun(async () => { 
     try {
         const shouldEmail = true;
-        const testLocally = true;
         if (shouldEmail) {
             const userPosts = await prisma.user_posts.findMany({
                 where: {
@@ -233,7 +235,7 @@ const postsThatAreFlagged = functions.pubsub.schedule('every 24 hours').onRun(as
         else {
             await prisma.user_posts.deleteMany({
                 where: {
-                    isFlagged: !shouldEmail
+                    isFlagged: '1'
                 }
             });
         }
