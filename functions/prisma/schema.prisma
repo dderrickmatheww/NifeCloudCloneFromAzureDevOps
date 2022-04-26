@@ -8,16 +8,14 @@ datasource db {
 }
 
 model business_events {
-  eventId      Int         @id @default(autoincrement())
-  businessId   Int?
-  businessUID  String      @db.VarChar
-  lastModified DateTime?   @db.Timestamp(6)
-  created      DateTime?   @db.Timestamp(6)
-  userId       Int?
+  eventId      Int        @id @default(autoincrement())
+  business     String     @db.VarChar
+  lastModified DateTime?  @db.Timestamp(6)
+  created      DateTime?  @db.Timestamp(6)
   eventtype    eventtype?
-  description  String?     @db.VarChar
-  businesses   businesses? @relation(fields: [businessId], references: [businessId], onDelete: NoAction, onUpdate: NoAction)
-  users        users?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description  String?    @db.VarChar
+  user         String?    @db.VarChar
+  businesses   businesses @relation(fields: [business], references: [uuid], onDelete: Cascade)
 }
 
 model businesses {
@@ -64,7 +62,7 @@ model user_friends {
 }
 
 model user_posts {
-  postId      Int         @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   latitude    String?     @db.VarChar
   longitude   String?     @db.VarChar
   description String?     @db.VarChar
@@ -97,7 +95,6 @@ model users {
   isFlagged                                 String?                @db.Bit(1)
   latitude                                  Float?
   longitude                                 Float?
-  business_events                           business_events[]
   businesses                                businesses[]
   user_check_ins                            user_check_ins[]
   user_favorite_places                      user_favorite_places[]
@@ -111,7 +108,7 @@ model user_check_ins {
   user       String?     @db.VarChar
   business   String?     @db.VarChar
   created    DateTime?   @db.Timestamp(6)
-  isPrivate  String?     @db.Bit(1)
+  isPrivate  Boolean?
   businesses businesses? @relation(fields: [business], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
   users      users?      @relation(fields: [user], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
 }

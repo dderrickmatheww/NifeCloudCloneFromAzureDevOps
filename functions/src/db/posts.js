@@ -37,7 +37,7 @@ const getPosts = functions.https.onRequest(async (request, response) => {
         const { userId } = JSON.parse(request.body);
         const user = await prisma.users.findUnique({
             where: {
-                userId
+                id: userId
             },
             include: {
                 user_posts: true
@@ -72,7 +72,7 @@ const updatePostById = functions.https.onRequest(async (request, response) => {
         const { postId, description, image } = JSON.parse(request.body);
         const user = await prisma.user_posts.update({
             where: {
-                postId
+                id: postId
             },
             data: {
                 description,
@@ -96,7 +96,7 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
         postId = queryParam ? parseInt(postId) : postId;
         const deletedPost = await prisma.user_posts.delete({
             where: {
-                postId
+                id: postId
             }
         });
         if (queryParam) {
