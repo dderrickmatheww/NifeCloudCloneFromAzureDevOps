@@ -10,6 +10,7 @@ const transporter = nodemailer.createTransport({
         pass: process.env.PASSWORD
     }
 });
+
 const testLocally = process.env.LocalTesting == "true";
 
 const getPostById = functions.https.onRequest(async (request, response) => {
@@ -65,6 +66,47 @@ const getPosts = functions.https.onRequest(async (request, response) => {
     }
 });
 
+const getPostsPaginated = functions.https.onRequest(async (request, response) => {
+    try {
+        // const {uuid} = validateToken(req.headers.authorization)
+        functions.logger.log(`body: ${request.body}`);
+        const { userId, take, skip } = JSON.parse(request.body);
+        const userFriends = await prisma.user_friends.findMany({
+            where: {
+                OR: [
+                    {
+                        userId,
+                        isFriend: true,
+                        isRequest: false
+                    },
+                    {
+                        friendId: userId,
+                        isFriend: true,
+                        isRequest: false
+                    }
+                ]
+            },
+            include: {
+                users_user_friends_friendIdTousers: {
+                    include: {
+                        user_posts: {
+                            take,
+                            skip
+                        }
+                    }
+                }
+            }
+        });
+        console.log(userFriends);
+        const posts = userFriends.map(obj => obj.users_user_friends_friendIdTousers).map(obj => obj.user_posts).flat().sort((a, b) => b.created - a.created);
+        response.json(posts);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 const updatePostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
@@ -105,6 +147,21 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
         else {
             response.json(deletedPost);
         }
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const createPost = functions.https.onRequest(async (request, response) => {
+    try {
+        // const {uuid} = validateToken(req.headers.authorization)
+        const post = JSON.parse(request.body);
+        const createdPost = await prisma.user_posts.create({
+            data: post
+        });
+        response.json(createdPost);
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
@@ -252,5 +309,7 @@ module.exports = {
     deletePostById,
     //deleteAllPosts,
     postsThatAreFlagged,
-    postsThatAreFlaggedTest
+    postsThatAreFlaggedTest,
+    createPost,
+    getPostsPaginated
 }

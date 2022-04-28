@@ -53,10 +53,11 @@ model user_friends {
   id                                 Int       @id @default(autoincrement())
   userId                             Int?
   friendId                           Int
-  isFriend                           String?   @default(dbgenerated("'1'::\"bit\"")) @db.Bit(1)
-  isBlocked                          String?   @default(dbgenerated("'0'::\"bit\"")) @db.Bit(1)
-  lastModified                       DateTime? @db.Timestamp(6)
-  created                            DateTime? @db.Timestamp(6)
+  created                            DateTime? @db.Timestamptz(6)
+  lastModified                       DateTime? @db.Timestamptz(6)
+  isBlocked                          Boolean?  @default(false)
+  isFriend                           Boolean?  @default(false)
+  isRequest                          Boolean?  @default(true)
   users_user_friends_friendIdTousers users     @relation("user_friends_friendIdTousers", fields: [friendId], references: [id], onDelete: Cascade)
   users                              users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -71,6 +72,7 @@ model user_posts {
   image       String?     @db.VarChar
   created     DateTime?   @db.Timestamp(6)
   isFlagged   String?     @db.Bit(1)
+  type        String?     @db.VarChar
   businesses  businesses? @relation(fields: [businessId], references: [businessId], onDelete: NoAction, onUpdate: NoAction)
   users       users?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -95,6 +97,7 @@ model users {
   isFlagged                                 String?                @db.Bit(1)
   latitude                                  Float?
   longitude                                 Float?
+  eula                                      Boolean[]
   businesses                                businesses[]
   user_check_ins                            user_check_ins[]
   user_favorite_places                      user_favorite_places[]
