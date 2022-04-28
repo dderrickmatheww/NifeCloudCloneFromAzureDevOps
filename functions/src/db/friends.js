@@ -5,7 +5,6 @@ const prisma = new PrismaClient();
 
 const testLocally = process.env.LocalTesting == "true";
 
-
 // User Friends
 const getUserFriendById = functions.https.onRequest(async (request, response) => {
     try {
@@ -102,7 +101,6 @@ const deleteUserFriendship = functions.https.onRequest(async (request, response)
         response.json(error);
     }
 });
-
 
 module.exports = {
     getUserFriendById,
