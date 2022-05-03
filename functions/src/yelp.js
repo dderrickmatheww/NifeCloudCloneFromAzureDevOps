@@ -28,6 +28,30 @@ const getBusinessesNearby = functions.https.onRequest(async (request, response) 
     }
 });
 
+const searchBusinesses = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`getBusinessesNearby FIRED!`);
+    const { latitude, longitude, search } = request.body;
+    const url = `https://api.yelp.com/v3/businesses/search?term=${search}&latitude=${latitude}&longitude=${longitude}&radius=${TEN_MILES}&sort_by=distance&limit=50`
+    try {
+        await validateToken();
+        const {data} = await axios.get(
+            url,
+            {
+                headers:{
+                    Authorization: "Bearer " + YELP_PLACE_KEY
+                }
+            }
+        )
+        const {businesses} = data;
+        response.json(businesses);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 module.exports = {
-    getBusinessesNearby
+    getBusinessesNearby,
+    searchBusinesses
 }

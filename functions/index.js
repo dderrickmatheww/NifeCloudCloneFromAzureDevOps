@@ -1,9 +1,9 @@
 const { getPostById, getPosts, updatePostById, deletePostById, postsThatAreFlagged, postsThatAreFlaggedTest } = require('./src/db/posts');
 const admin = require('firebase-admin');
 admin.initializeApp();
-const {getUser, updateUser, updateOrDeleteFavorites} = require('./src/db/users')
+const {getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn} = require('./src/db/users')
 const {getBusinessCheckIns, getBusiness} = require("./src/db/businesses");
-const {getBusinessesNearby} = require('./src/yelp')
+const {getBusinessesNearby, searchBusinesses} = require('./src/yelp')
 
 
 // eslint-disable-next-line consistent-return
@@ -14,6 +14,12 @@ const index = (req, res) => {
             return getUser(req, res);
         case '/updateUser':
             return updateUser(req, res);
+        case '/updateOrDeleteFavorites':
+            return updateOrDeleteFavorites(req, res)
+        case '/createCheckIn':
+            return createCheckIn(req, res)
+        case '/deleteCheckIn':
+            return deleteCheckIn(req, res)
         //Post
         case '/getPostById':
             return  getPostById(req, res);
@@ -28,12 +34,12 @@ const index = (req, res) => {
         //Business
         case '/getBusinessesNearby':
             return getBusinessesNearby(req, res);
+        case '/searchBusinesses':
+            return searchBusinesses(req, res);
         case '/getBusiness':
             return getBusiness(req, res)
         case '/getBusinessCheckIns':
             return getBusinessCheckIns(req, res)
-        case '/updateOrDeleteFavorites':
-            return updateOrDeleteFavorites(req, res)
         default:
             res.send('function not defined');
     }
@@ -47,5 +53,13 @@ module.exports = {
     postsThatAreFlagged,
     getBusinessCheckIns,
     getBusiness,
-    updateOrDeleteFavorites
+    updateOrDeleteFavorites,
+    createCheckIn,
+    deleteCheckIn,
+    getPostById,
+    getPosts,
+    updatePostById,
+    deletePostById,
+    postsThatAreFlaggedTest,
+    searchBusinesses
 }

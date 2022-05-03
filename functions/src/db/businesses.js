@@ -12,6 +12,9 @@ const getBusiness = functions.https.onRequest(async (request, response) => {
             where: {
                 uuid
             },
+            include:{
+                business_events: true
+            }
         })
         response.json(data);
     }
@@ -20,6 +23,8 @@ const getBusiness = functions.https.onRequest(async (request, response) => {
         response.json(error);
     }
 });
+
+
 
 //TODO right TTL for checkins
 const getBusinessCheckIns = functions.https.onRequest(async (request, response) => {

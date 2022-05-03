@@ -92,6 +92,46 @@ const updateOrDeleteFavorites = functions.https.onRequest(async (request, respon
     }
 });
 
+const createCheckIn  = functions.https.onRequest(async (request, response) => {
+    const { user, business, isPrivate } = request.body;
+    functions.logger.log(`createCheckIn FIRED!`);
+    try {
+        await validateToken()
+            const res = await prisma.user_check_ins.create({
+                data:{
+                    business,
+                    user,
+                    isPrivate,
+                    created: new Date()
+                },
+            })
+            response.json(res);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+
+const deleteCheckIn  = functions.https.onRequest(async (request, response) => {
+    const { id } = request.body;
+    functions.logger.log(`deleteCheckIn FIRED!`);
+    try {
+        await validateToken()
+        const res = await prisma.user_check_ins.delete({
+            where:{
+                id
+            }
+        })
+        response.json(res);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 
 
 
@@ -99,4 +139,6 @@ module.exports = {
     getUser,
     updateUser,
     updateOrDeleteFavorites,
+    createCheckIn,
+    deleteCheckIn
 }
