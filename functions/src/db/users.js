@@ -19,7 +19,8 @@ const getUser = functions.https.onRequest(async (request, response) => {
                 user_favorite_places: true,
                 user_friends: true,
                 user_check_ins: true,
-                user_posts: true
+                user_posts: true,
+                user_last_visited: true
             }
         })
         response.json(user);
@@ -49,7 +50,8 @@ const updateUser = functions.https.onRequest(async (request, response) => {
                 user_favorite_places: true,
                 user_friends: true,
                 user_check_ins: true,
-                user_posts: true
+                user_posts: true,
+                user_last_visited: true,
             }
         })
         response.json(res);
@@ -119,20 +121,26 @@ const deleteCheckIn  = functions.https.onRequest(async (request, response) => {
     functions.logger.log(`deleteCheckIn FIRED!`);
     try {
         await validateToken()
-        const res = await prisma.user_check_ins.delete({
+        const deleted = await prisma.user_check_ins.delete({
             where:{
                 id
             }
         })
-        response.json(res);
+        const lastVisited = await prisma.user_last_visited.create({
+            data:{
+                business: deleted.business,
+                user: deleted.user,
+                isPrivate: deleted.isPrivate,
+                created: new Date()
+            },
+        })
+        response.json({deleted, lastVisited});
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
         response.json(error);
     }
 });
-
-
 
 
 module.exports = {

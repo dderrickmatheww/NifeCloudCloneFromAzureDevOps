@@ -2,7 +2,7 @@ const { getPostById, getPosts, updatePostById, deletePostById, postsThatAreFlagg
 const admin = require('firebase-admin');
 admin.initializeApp();
 const {getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn} = require('./src/db/users')
-const {getBusinessCheckIns, getBusiness} = require("./src/db/businesses");
+const {getBusinessCheckIns, getBusiness, getFriendCheckIns} = require("./src/db/businesses");
 const {getBusinessesNearby, searchBusinesses} = require('./src/yelp')
 
 
@@ -40,6 +40,8 @@ const index = (req, res) => {
             return getBusiness(req, res)
         case '/getBusinessCheckIns':
             return getBusinessCheckIns(req, res)
+        case '/getFriendCheckIns':
+            return getFriendCheckIns(req, res)
         default:
             res.send('function not defined');
     }
@@ -61,5 +63,6 @@ module.exports = {
     updatePostById,
     deletePostById,
     postsThatAreFlaggedTest,
-    searchBusinesses
+    searchBusinesses,
+    getFriendCheckIns
 }

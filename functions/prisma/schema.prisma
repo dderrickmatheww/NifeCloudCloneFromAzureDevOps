@@ -35,7 +35,6 @@ model businesses {
   businessId           Int                    @id @default(autoincrement())
   users                users?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   business_events      business_events[]
-  user_check_ins       user_check_ins[]
   user_favorite_places user_favorite_places[]
   user_posts           user_posts[]
 }
@@ -99,21 +98,32 @@ model users {
   longitude                                 Float?
   eula                                      Boolean[]
   businesses                                businesses[]
-  user_check_ins                            user_check_ins[]
+  user_check_ins                            user_check_ins?
   user_favorite_places                      user_favorite_places[]
   user_friends_user_friends_friendIdTousers user_friends[]         @relation("user_friends_friendIdTousers")
   user_friends                              user_friends[]
+  user_last_visited                         user_last_visited[]
   user_posts                                user_posts[]
 }
 
 model user_check_ins {
-  id         Int         @id @default(autoincrement())
-  user       String?     @db.VarChar
-  business   String?     @db.VarChar
-  created    DateTime?   @db.Timestamp(6)
-  isPrivate  Boolean?
-  businesses businesses? @relation(fields: [business], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
-  users      users?      @relation(fields: [user], references: [uuid], onDelete: NoAction, onUpdate: NoAction)
+  id        Int       @id @default(autoincrement())
+  created   DateTime? @db.Timestamp(6)
+  isPrivate Boolean?
+  user      Int?      @unique(map: "unique_check_in_user")
+  business  String?   @db.VarChar
+  users     users?    @relation(fields: [user], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_check_ins_user")
+
+  @@index([user], map: "fki_user_check_ins_user")
+}
+
+model user_last_visited {
+  business  String?   @db.VarChar
+  created   DateTime? @db.Timestamp(6)
+  isPrivate Boolean?
+  user      Int?
+  id        Int       @id @default(autoincrement())
+  users     users?    @relation(fields: [user], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 enum eventtype {

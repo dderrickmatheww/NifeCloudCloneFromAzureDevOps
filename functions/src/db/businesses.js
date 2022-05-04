@@ -45,7 +45,49 @@ const getBusinessCheckIns = functions.https.onRequest(async (request, response) 
     }
 });
 
+const getFriendCheckIns = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`getFriendCheckIns FIRED!`);
+    const { friends, business } = request.body;
+    try {
+        await validateToken()
+        const checkIns = await prisma.user_check_ins.findMany({
+            where: {
+                user: { in: friends },
+                isPrivate: false
+            },
+            include:{
+                users: {
+                    select: {
+                        displayName: true,
+                        photoSource: true
+                    }
+                }
+            }
+        })
+        const lastVisited = await prisma.user_last_visited.findMany({
+            where: {
+                user: { in: friends },
+                isPrivate: false
+            },
+            include:{
+                users: {
+                    select: {
+                        displayName: true,
+                        photoSource: true
+                    }
+                }
+            }
+        })
+        response.json({checkIns, lastVisited});
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 module.exports = {
     getBusinessCheckIns,
-    getBusiness
+    getBusiness,
+    getFriendCheckIns
 }
