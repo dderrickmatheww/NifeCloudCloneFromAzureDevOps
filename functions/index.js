@@ -135,6 +135,7 @@ exports.checkInForBuisness = functions.https.onRequest(async (request, response)
 exports.whatsPoppinFeed = functions.https.onRequest(async (request, response) => {
     const body = request.body ? JSON.parse(request.body) : false;
     const userLocation = body ? body.userLocation : false;
+    const businessData = await db.collection("businesses").get();
     if (body && userLocation) {
         const userArr = [];
         const businessesArr = [];
@@ -147,7 +148,39 @@ exports.whatsPoppinFeed = functions.https.onRequest(async (request, response) =>
                 let checkInLong = checkIn ? parseInt(checkIn.latAndLong.split(',')[1]) : parseInt(location.coords.longitude);
                 let userLat = parseInt(userLocation.coords.latitude);
                 let userLong = parseInt(userLocation.coords.longitude);
-                if(boolean) {
+                // filter created to filter through all business's and identify coordinates.
+                if (checkIn = undefined) {
+                let comparedBusiness = businessData.filter((obj) => {
+                    let isWithinRadius = geolib.isPointWithinRadius(
+                        {
+                            latitude: obj.coordinates.latitude,
+                            longitude: obj.coordinates.longitude,
+                        }, 
+                        {
+                            latitude: userLat,
+                            longitude: userLong
+                        }, 
+                        32187
+                    ); 
+                    return isWithinRadius;
+                });
+                return comparedBusiness.length > 0;
+            } else {
+                isWithinRadius = geolib.isPointWithinRadius(
+                    {
+                        latitude: checkInLat,
+                        longitude: checkInLong
+                    }, 
+                    {
+                        latitude: userLat,
+                        longitude: userLong
+                    }, 
+                    32187
+                ); 
+                return isWithinRadius;
+            }
+
+                /*if(boolean) {
                     isWithinRadius = geolib.isPointWithinRadius(
                         {
                             latitude: checkInLat,
@@ -175,7 +208,8 @@ exports.whatsPoppinFeed = functions.https.onRequest(async (request, response) =>
                     ); 
                     return isWithinRadius;
                 }
-            }
+            } */
+        }
             const userRef = await db.collection('feed').get();
             try {
                 userRef.forEach((doc) => {
