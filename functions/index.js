@@ -7,7 +7,7 @@ const {
     getUserFriendById, 
     deleteUserFriendship, 
     getUserFriends, 
-    getUserFriendsPaginated 
+    getUserFriendsPaginated
 } = require('./src/db/friends');
 const { 
     getUserPendingFriendRequests, 
@@ -26,7 +26,8 @@ const {
     deletePostById, 
     postsThatAreFlagged, 
     postsThatAreFlaggedTest, 
-    getPostsPaginated 
+    getPostsPaginated,
+    createPost
 } = require('./src/db/posts');
 
 
@@ -53,6 +54,8 @@ const index = (req, res) => {
             return deletePostById(req, res);
         case '/postsThatAreFlaggedTest':
             return postsThatAreFlaggedTest(req, res);
+        case '/createPost':
+            return createPost(req, res);
 
         //Friends
         case '/getUserFriendById':

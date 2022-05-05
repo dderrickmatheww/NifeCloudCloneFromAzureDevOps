@@ -134,7 +134,7 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
         // const {uuid} = validateToken(req.headers.authorization)
         functions.logger.log(`body: ${request.body}`);
         const queryParam = Object.keys(request.body).length === 0;
-        let { postId } = queryParam ? request.query : JSON.parse(request.body);
+        let { postId } = queryParam ? request.query : request.body;
         postId = queryParam ? parseInt(postId) : postId;
         const deletedPost = await prisma.user_posts.delete({
             where: {
@@ -157,9 +157,26 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
 const createPost = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const post = JSON.parse(request.body);
+        functions.logger.info(`Request: ${request.body}`);
+        const { 
+            description, 
+            type, 
+            image, 
+            businessId, 
+            latitude, 
+            longitude, 
+            userId 
+        } = request.body;
         const createdPost = await prisma.user_posts.create({
-            data: post
+            data: {
+                description,
+                type, 
+                image, 
+                businessId, 
+                latitude, 
+                longitude, 
+                userId
+            }
         });
         response.json(createdPost);
     }
