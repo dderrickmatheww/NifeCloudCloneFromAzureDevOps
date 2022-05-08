@@ -11,10 +11,11 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+const testLocally = process.env.LocalTesting == "true";
+
 const getPostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
         const { postId } = JSON.parse(request.body);
         const userPost = await prisma.user_posts.findUnique({
             where: {
@@ -32,28 +33,86 @@ const getPostById = functions.https.onRequest(async (request, response) => {
 const getPosts = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
-        const { userId } = JSON.parse(request.body);
-        const userPosts = await prisma.user_posts.findMany({
+        const { userId } = request.body;
+        const user = await prisma.users.findUnique({
             where: {
-                userId
+                id: userId
+            },
+            include: {
+                user_posts: true
             }
         });
-        const friendPosts = await prisma.user_friends.findMany({
+        const userFriends = await prisma.user_friends.findMany({
             where: {
                 friendId: userId
             },
             include: {
                 users: {
                     include: {
-                        user_posts
+                        user_posts: true
                     }
                 }
             }
         });
-        const posts = [...userPosts, ...friendPosts];
-        console.log(posts);
-        response.json(userPosts);
+        const friendPosts = userFriends.map(obj => obj.users).map(friend => { 
+            return friend.user_posts.map((post) => {
+                return {
+                    ...post,
+                    name: friend.name,
+                    photoSource: friend.photoSource,
+                    displayName: friend.displayName
+                }
+            });
+        });
+        const userPosts = user.user_posts.map((post) => {
+            return {
+                ...post,
+                name: user.name,
+                photoSource: user.photoSource,
+                displayName: user.displayName
+            }
+        });
+        const posts = [...userPosts, ...friendPosts].flat().sort((a, b) => b.created - a.created);
+        response.json(posts);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const getPostsPaginated = functions.https.onRequest(async (request, response) => {
+    try {
+        // const {uuid} = validateToken(req.headers.authorization)
+        const { userId, take, skip } = request.body;
+        const userFriends = await prisma.user_friends.findMany({
+            where: {
+                OR: [
+                    {
+                        userId,
+                        isFriend: true,
+                        isRequest: false
+                    },
+                    {
+                        friendId: userId,
+                        isFriend: true,
+                        isRequest: false
+                    }
+                ]
+            },
+            include: {
+                users_user_friends_friendIdTousers: {
+                    include: {
+                        user_posts: {
+                            take,
+                            skip
+                        }
+                    }
+                }
+            }
+        });
+        const posts = userFriends.map(obj => obj.users_user_friends_friendIdTousers).map(obj => obj.user_posts).flat().sort((a, b) => b.created - a.created);
+        response.json(posts);
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
@@ -64,11 +123,10 @@ const getPosts = functions.https.onRequest(async (request, response) => {
 const updatePostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
-        const { postId, description, image } = JSON.parse(request.body);
+        const { postId, description, image } = request.body;
         const user = await prisma.user_posts.update({
             where: {
-                postId
+                id: postId
             },
             data: {
                 description,
@@ -86,13 +144,12 @@ const updatePostById = functions.https.onRequest(async (request, response) => {
 const deletePostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
         const queryParam = Object.keys(request.body).length === 0;
-        let { postId } = queryParam ? request.query : JSON.parse(request.body);
+        let { postId } = queryParam ? request.query : request.body;
         postId = queryParam ? parseInt(postId) : postId;
         const deletedPost = await prisma.user_posts.delete({
             where: {
-                postId
+                id: postId
             }
         });
         if (queryParam) {
@@ -101,6 +158,39 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
         else {
             response.json(deletedPost);
         }
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const createPost = functions.https.onRequest(async (request, response) => {
+    try {
+        // const {uuid} = validateToken(req.headers.authorization)
+        const { 
+            description, 
+            type, 
+            image, 
+            businessId, 
+            latitude, 
+            longitude, 
+            userId ,
+            created
+        } = request.body;
+        const createdPost = await prisma.user_posts.create({
+            data: {
+                description,
+                type, 
+                image, 
+                businessId, 
+                latitude, 
+                longitude, 
+                userId,
+                created
+            }
+        });
+        response.json(createdPost);
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
@@ -126,7 +216,6 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
 const postsThatAreFlaggedTest = functions.https.onRequest(async (request, response) => {
     try {
         const shouldEmail = true;
-        const testLocally = true;
         if (shouldEmail) {
             const userPosts = await prisma.user_posts.findMany({
                 where: {
@@ -186,7 +275,6 @@ const postsThatAreFlaggedTest = functions.https.onRequest(async (request, respon
 const postsThatAreFlagged = functions.pubsub.schedule('every 24 hours').onRun(async () => { 
     try {
         const shouldEmail = true;
-        const testLocally = true;
         if (shouldEmail) {
             const userPosts = await prisma.user_posts.findMany({
                 where: {
@@ -233,7 +321,7 @@ const postsThatAreFlagged = functions.pubsub.schedule('every 24 hours').onRun(as
         else {
             await prisma.user_posts.deleteMany({
                 where: {
-                    isFlagged: !shouldEmail
+                    isFlagged: '1'
                 }
             });
         }
@@ -250,5 +338,7 @@ module.exports = {
     deletePostById,
     //deleteAllPosts,
     postsThatAreFlagged,
-    postsThatAreFlaggedTest
+    postsThatAreFlaggedTest,
+    createPost,
+    getPostsPaginated
 }

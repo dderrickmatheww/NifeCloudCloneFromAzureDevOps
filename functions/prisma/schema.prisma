@@ -63,8 +63,6 @@ model user_friends {
 
 model user_posts {
   id          Int         @id @default(autoincrement())
-  latitude    String?     @db.VarChar
-  longitude   String?     @db.VarChar
   description String?     @db.VarChar
   userId      Int?
   businessId  Int?
@@ -72,6 +70,9 @@ model user_posts {
   created     DateTime?   @db.Timestamp(6)
   isFlagged   String?     @db.Bit(1)
   type        String?     @db.VarChar
+
+  latitude    Float?
+  longitude   Float?
   businesses  businesses? @relation(fields: [businessId], references: [businessId], onDelete: NoAction, onUpdate: NoAction)
   users       users?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
