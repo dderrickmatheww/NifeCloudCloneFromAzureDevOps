@@ -16,7 +16,6 @@ const testLocally = process.env.LocalTesting == "true";
 const getPostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
         const { postId } = JSON.parse(request.body);
         const userPost = await prisma.user_posts.findUnique({
             where: {
@@ -34,8 +33,7 @@ const getPostById = functions.https.onRequest(async (request, response) => {
 const getPosts = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
-        const { userId } = JSON.parse(request.body);
+        const { userId } = request.body;
         const user = await prisma.users.findUnique({
             where: {
                 id: userId
@@ -56,8 +54,25 @@ const getPosts = functions.https.onRequest(async (request, response) => {
                 }
             }
         });
-        const friends = userFriends.map(obj => obj.users);
-        const posts = [user, ...friends];
+        const friendPosts = userFriends.map(obj => obj.users).map(friend => { 
+            return friend.user_posts.map((post) => {
+                return {
+                    ...post,
+                    name: friend.name,
+                    photoSource: friend.photoSource,
+                    displayName: friend.displayName
+                }
+            });
+        });
+        const userPosts = user.user_posts.map((post) => {
+            return {
+                ...post,
+                name: user.name,
+                photoSource: user.photoSource,
+                displayName: user.displayName
+            }
+        });
+        const posts = [...userPosts, ...friendPosts].flat().sort((a, b) => b.created - a.created);
         response.json(posts);
     }
     catch(error) {
@@ -69,8 +84,7 @@ const getPosts = functions.https.onRequest(async (request, response) => {
 const getPostsPaginated = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
-        const { userId, take, skip } = JSON.parse(request.body);
+        const { userId, take, skip } = request.body;
         const userFriends = await prisma.user_friends.findMany({
             where: {
                 OR: [
@@ -97,7 +111,6 @@ const getPostsPaginated = functions.https.onRequest(async (request, response) =>
                 }
             }
         });
-        console.log(userFriends);
         const posts = userFriends.map(obj => obj.users_user_friends_friendIdTousers).map(obj => obj.user_posts).flat().sort((a, b) => b.created - a.created);
         response.json(posts);
     }
@@ -110,8 +123,7 @@ const getPostsPaginated = functions.https.onRequest(async (request, response) =>
 const updatePostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
-        const { postId, description, image } = JSON.parse(request.body);
+        const { postId, description, image } = request.body;
         const user = await prisma.user_posts.update({
             where: {
                 id: postId
@@ -132,7 +144,6 @@ const updatePostById = functions.https.onRequest(async (request, response) => {
 const deletePostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.log(`body: ${request.body}`);
         const queryParam = Object.keys(request.body).length === 0;
         let { postId } = queryParam ? request.query : request.body;
         postId = queryParam ? parseInt(postId) : postId;
@@ -157,7 +168,6 @@ const deletePostById = functions.https.onRequest(async (request, response) => {
 const createPost = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        functions.logger.info(`Request: ${request.body}`);
         const { 
             description, 
             type, 
@@ -165,7 +175,8 @@ const createPost = functions.https.onRequest(async (request, response) => {
             businessId, 
             latitude, 
             longitude, 
-            userId 
+            userId ,
+            created
         } = request.body;
         const createdPost = await prisma.user_posts.create({
             data: {
@@ -175,7 +186,8 @@ const createPost = functions.https.onRequest(async (request, response) => {
                 businessId, 
                 latitude, 
                 longitude, 
-                userId
+                userId,
+                created
             }
         });
         response.json(createdPost);
