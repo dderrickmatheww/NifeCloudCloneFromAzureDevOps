@@ -29,7 +29,9 @@ const {
     getPostsPaginated,
     createPost
 } = require('./src/db/posts');
-
+const { 
+    getWhatsPoppinFeed,
+} = require('./src/db/whatsPoppin');
 
 // eslint-disable-next-line consistent-return
 const index = (req, res) => {
@@ -56,6 +58,10 @@ const index = (req, res) => {
             return postsThatAreFlaggedTest(req, res);
         case '/createPost':
             return createPost(req, res);
+
+        //Whats Poppin
+        case '/getWhatsPoppinFeed':
+            return getWhatsPoppinFeed(req, res);
 
         //Friends
         case '/getUserFriendById':

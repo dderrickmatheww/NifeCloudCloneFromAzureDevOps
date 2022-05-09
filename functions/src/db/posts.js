@@ -34,14 +34,47 @@ const getPosts = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
         const { userId } = request.body;
+        //Grab user data
         const user = await prisma.users.findUnique({
             where: {
                 id: userId
             },
             include: {
-                user_posts: true
+                user_posts: true,
+                user_check_ins: true,
+                user_last_visited: true
             }
         });
+        // Set basic userInfo
+        const userInfo = {
+            name: user.name,
+            photoSource: user.photoSource,
+            displayName: user.displayName
+        }
+        //Grab user posts if user has posts
+        const userPosts = user.user_posts.length > 0 ? user.user_posts.map((post) => {
+            return {
+                ...post,
+                ...userInfo
+            }
+        }) : [];
+        //Grab user last visited if user has last visited
+        const userLastVisited = user.user_last_visited.length > 0 ? user.user_last_visited.map((lastVisited) => {
+            return {
+                ...lastVisited,
+                ...userInfo,
+                type: "LASTVISITED"
+            }
+        }) : [];
+        //Grab user checkIns if user has checkins
+        const userCheckIn = user.user_check_ins ? [{
+            ...user.user_check_ins, 
+            ...userInfo,
+            type: "CHECKIN"
+        }] : [];
+        //Combined into an array of objects
+        const userDataRows = [...userPosts, ...userLastVisited, ...userCheckIn];
+        //Grab friend data
         const userFriends = await prisma.user_friends.findMany({
             where: {
                 friendId: userId
@@ -49,30 +82,47 @@ const getPosts = functions.https.onRequest(async (request, response) => {
             include: {
                 users: {
                     include: {
-                        user_posts: true
+                        user_posts: true,
+                        user_check_ins: true,
+                        user_last_visited: true
                     }
                 }
             }
         });
-        const friendPosts = userFriends.map(obj => obj.users).map(friend => { 
-            return friend.user_posts.map((post) => {
+        //Combined into an array of objects
+        const friendDataRows = userFriends.map(obj => obj.users).map(friend => {
+            //Stores common user information
+            const friendInfo = {
+                name: friend.name,
+                photoSource: friend.photoSource,
+                displayName: friend.displayName,
+            };
+            //Stores friend posts if friend has posts
+            const posts = friend.user_posts.length > 0 ? friend.user_posts.map((post) => {
                 return {
                     ...post,
-                    name: friend.name,
-                    photoSource: friend.photoSource,
-                    displayName: friend.displayName
+                    ...friendInfo
                 }
-            });
+            }) : [];
+            //Stores friend last visited if friend has last visited
+            const lastVisited = friend.user_last_visited.length ? friend.user_last_visited.map((lastVisited) => {
+                return {
+                    ...lastVisited,
+                    ...friendInfo,
+                    type: "LASTVISITED"
+                }
+            }) : [];
+            //Stores friend current checkin if friend is checked in
+            const checkIn = friend.user_check_ins ? [{
+                ...friend.user_check_ins, 
+                ...friendInfo,
+                type: "CHECKIN"
+            }] : [];
+            //Combined into a data row
+            const dataRow = [...posts, ...lastVisited, ...checkIn];
+            return dataRow;
         });
-        const userPosts = user.user_posts.map((post) => {
-            return {
-                ...post,
-                name: user.name,
-                photoSource: user.photoSource,
-                displayName: user.displayName
-            }
-        });
-        const posts = [...userPosts, ...friendPosts].flat().sort((a, b) => b.created - a.created);
+        const posts = [...userDataRows, ...friendDataRows].flat().sort((a, b) => b.created - a.created);
         response.json(posts);
     }
     catch(error) {
