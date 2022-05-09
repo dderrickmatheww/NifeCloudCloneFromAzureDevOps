@@ -8,7 +8,8 @@
     "start": "npx functions-framework --target=index",
     "deploy": "firebase deploy --only functions",
     "postinstall": "npx prisma generate",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "pull": "npx prisma db pull && npx prisma generate"
   },
   "engines": {
     "node": "10"

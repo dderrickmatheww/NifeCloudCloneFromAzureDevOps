@@ -49,7 +49,7 @@ const getPosts = functions.https.onRequest(async (request, response) => {
             include: {
                 users: {
                     include: {
-                        user_posts: true
+                        user_posts: true,
                     }
                 }
             }

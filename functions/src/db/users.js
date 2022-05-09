@@ -120,7 +120,7 @@ const updateOrDeleteFavorites = functions.https.onRequest(async (request, respon
 });
 
 const createCheckIn  = functions.https.onRequest(async (request, response) => {
-    const { user, business, isPrivate } = request.body;
+    const { user, business, isPrivate, businessName } = request.body;
     functions.logger.log(`createCheckIn FIRED!`);
     try {
         await validateToken()
@@ -129,6 +129,7 @@ const createCheckIn  = functions.https.onRequest(async (request, response) => {
                     business,
                     user,
                     isPrivate,
+                    businessName,
                     created: new Date()
                 },
             })
@@ -156,6 +157,7 @@ const deleteCheckIn  = functions.https.onRequest(async (request, response) => {
                 business: deleted.business,
                 user: deleted.user,
                 isPrivate: deleted.isPrivate,
+                businessName: deleted.businessName,
                 created: new Date()
             },
         })
