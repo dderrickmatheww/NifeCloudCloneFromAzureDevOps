@@ -1,7 +1,7 @@
 const admin = require('firebase-admin');
 admin.initializeApp();
 const { getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn} = require('./src/db/users');
-const { getBusinessCheckIns, getBusiness, getFriendCheckIns} = require("./src/db/businesses");
+const { getBusinessCheckIns, getBusiness, getFriendCheckIns, getNifeBusinessesByState} = require("./src/db/businesses");
 const { getBusinessesNearby, searchBusinesses} = require('./src/yelp');
 const { 
     getUserFriendById, 
@@ -100,6 +100,8 @@ const index = (req, res) => {
             return getBusinessCheckIns(req, res)
         case '/getFriendCheckIns':
             return getFriendCheckIns(req, res)
+        case '/getNifeBusinessesByState':
+            return getNifeBusinessesByState(req, res)
         default:
             res.send('function not defined');
     }
@@ -124,4 +126,5 @@ module.exports = {
     searchBusinesses,
     getFriendCheckIns,
     getPostsPaginated,
+    getNifeBusinessesByState,
 }

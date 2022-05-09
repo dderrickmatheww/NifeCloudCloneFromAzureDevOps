@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const { PrismaClient } = require('@prisma/client')
 const {validateToken} = require("../validation");
+const states = require('us-state-converter')
 const prisma = new PrismaClient()
 
 const getBusiness = functions.https.onRequest(async (request, response) => {
@@ -86,8 +87,28 @@ const getFriendCheckIns = functions.https.onRequest(async (request, response) =>
     }
 });
 
+const getNifeBusinessesByState = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`getNifeBusinessesByState FIRED!`);
+    let { state } = request.body;
+    state = states.abbr(state);
+    try {
+        await validateToken()
+        const businesses = await prisma.businesses.findMany({
+            where: {
+                state
+            },
+        })
+        response.json(businesses);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 module.exports = {
     getBusinessCheckIns,
     getBusiness,
-    getFriendCheckIns
+    getFriendCheckIns,
+    getNifeBusinessesByState
 }

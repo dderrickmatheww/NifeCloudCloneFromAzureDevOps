@@ -23,7 +23,6 @@ model businesses {
   uuid                 String                 @unique(map: "businesses_businessUID_key") @db.VarChar
   lastModified         DateTime?              @db.Timestamp(6)
   created              DateTime?              @db.Timestamp(6)
-  address              String?                @db.VarChar
   email                String?                @db.VarChar
   displayName          String?                @db.VarChar
   phoneNumber          String?                @db.VarChar
@@ -37,6 +36,7 @@ model businesses {
   city                 String?                @db.VarChar
   zip                  String?                @db.VarChar
   country              String?                @db.VarChar
+  state                String?                @db.VarChar
   users                users?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   business_events      business_events[]
   user_favorite_places user_favorite_places[]
