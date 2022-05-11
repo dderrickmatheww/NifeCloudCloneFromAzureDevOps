@@ -9,6 +9,8 @@ const getWhatsPoppinFeed = functions.https.onRequest(async (request, response) =
     try {
         // const {uuid} = validateToken(req.headers.authorization)
         const { latitude, longitude } = request.body;
+        //Need to add location based query
+        //Based off the latitude and longitude of the user
         const businessCheckInCount = await prisma.user_check_ins.groupBy({
             by: ['business'],
             _count: {
@@ -27,7 +29,8 @@ const getWhatsPoppinFeed = functions.https.onRequest(async (request, response) =
                 }
             },
             include: {
-                business_events: true
+                business_events: true,
+                user_posts: true
             }
         });
         const whatsPoppinFeed = businessData.map((business) => {

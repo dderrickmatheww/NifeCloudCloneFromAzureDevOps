@@ -33,6 +33,7 @@ const getPostById = functions.https.onRequest(async (request, response) => {
 const getPosts = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
+        //Need to add favorited businesses statues/events/specials into my feed
         const { userId } = request.body;
         //Grab user data
         const user = await prisma.users.findUnique({
