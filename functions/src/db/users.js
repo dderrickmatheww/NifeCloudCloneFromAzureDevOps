@@ -19,7 +19,8 @@ const getUser = functions.https.onRequest(async (request, response) => {
                 user_favorite_places: true,
                 user_friends: true,
                 user_check_ins: true,
-                user_posts: true
+                user_posts: true,
+                user_last_visited: true
             }
         })
         response.json(user);
@@ -74,7 +75,8 @@ const updateUser = functions.https.onRequest(async (request, response) => {
                 user_favorite_places: true,
                 user_friends: true,
                 user_check_ins: true,
-                user_posts: true
+                user_posts: true,
+                user_last_visited: true,
             }
         })
         response.json(res);
@@ -117,11 +119,61 @@ const updateOrDeleteFavorites = functions.https.onRequest(async (request, respon
     }
 });
 
+const createCheckIn  = functions.https.onRequest(async (request, response) => {
+    const { user, business, isPrivate, businessName } = request.body;
+    functions.logger.log(`createCheckIn FIRED!`);
+    try {
+        await validateToken()
+            const res = await prisma.user_check_ins.create({
+                data:{
+                    business,
+                    user,
+                    isPrivate,
+                    businessName,
+                    created: new Date()
+                },
+            })
+            response.json(res);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
 
+
+const deleteCheckIn  = functions.https.onRequest(async (request, response) => {
+    const { id } = request.body;
+    functions.logger.log(`deleteCheckIn FIRED!`);
+    try {
+        await validateToken()
+        const deleted = await prisma.user_check_ins.delete({
+            where:{
+                id
+            }
+        })
+        const lastVisited = await prisma.user_last_visited.create({
+            data:{
+                business: deleted.business,
+                user: deleted.user,
+                isPrivate: deleted.isPrivate,
+                businessName: deleted.businessName,
+                created: new Date()
+            },
+        })
+        response.json({deleted, lastVisited});
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
 
 
 module.exports = {
     getUser,
     updateUser,
     updateOrDeleteFavorites,
+    createCheckIn,
+    deleteCheckIn
 }

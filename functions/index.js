@@ -1,8 +1,8 @@
 const admin = require('firebase-admin');
 admin.initializeApp();
-const { getUser, updateUser, updateOrDeleteFavorites } = require('./src/db/users');
-const { getBusinessCheckIns, getBusiness } = require("./src/db/businesses");
-const { getBusinessesNearby } = require('./src/yelp');
+const { getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn} = require('./src/db/users');
+const { getBusinessCheckIns, getBusiness, getFriendCheckIns, getNifeBusinessesByState} = require("./src/db/businesses");
+const { getBusinessesNearby, searchBusinesses} = require('./src/yelp');
 const { 
     getUserFriendById, 
     deleteUserFriendship, 
@@ -42,7 +42,12 @@ const index = (req, res) => {
             return getUser(req, res);
         case '/updateUser':
             return updateUser(req, res);
-
+        case '/updateOrDeleteFavorites':
+            return updateOrDeleteFavorites(req, res)
+        case '/createCheckIn':
+            return createCheckIn(req, res)
+        case '/deleteCheckIn':
+            return deleteCheckIn(req, res)
         //Post
         case '/getPostById':
             return  getPostById(req, res);
@@ -90,16 +95,19 @@ const index = (req, res) => {
                 return acceptFriendRequest(req, res);
         case '/cancelFriendRequest':
                 return cancelFriendRequest(req, res);
-
         //Business
         case '/getBusinessesNearby':
             return getBusinessesNearby(req, res);
+        case '/searchBusinesses':
+            return searchBusinesses(req, res);
         case '/getBusiness':
             return getBusiness(req, res)
         case '/getBusinessCheckIns':
             return getBusinessCheckIns(req, res)
-        case '/updateOrDeleteFavorites':
-            return updateOrDeleteFavorites(req, res)
+        case '/getFriendCheckIns':
+            return getFriendCheckIns(req, res)
+        case '/getNifeBusinessesByState':
+            return getNifeBusinessesByState(req, res)
         default:
             res.send('function not defined');
     }
@@ -114,5 +122,15 @@ module.exports = {
     getBusinessCheckIns,
     getBusiness,
     updateOrDeleteFavorites,
-    getPostsPaginated
+    createCheckIn,
+    deleteCheckIn,
+    getPostById,
+    getPosts,
+    updatePostById,
+    deletePostById,
+    postsThatAreFlaggedTest,
+    searchBusinesses,
+    getFriendCheckIns,
+    getPostsPaginated,
+    getNifeBusinessesByState,
 }

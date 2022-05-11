@@ -84,8 +84,11 @@ const getPosts = functions.https.onRequest(async (request, response) => {
                 users: {
                     include: {
                         user_posts: true,
+<<<<<<< HEAD
                         user_check_ins: true,
                         user_last_visited: true
+=======
+>>>>>>> matt-prisma-refactor
                     }
                 }
             }
