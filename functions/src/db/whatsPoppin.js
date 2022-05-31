@@ -33,11 +33,16 @@ const getWhatsPoppinFeed = functions.https.onRequest(async (request, response) =
                 user_posts: true
             }
         });
-        const whatsPoppinFeed = businessData.map((business) => {
+        const businessDataRows = businessData.map((business) => {
             const { uuid } = business;
             const checkIn = businessCheckInCount.find(checkIn => checkIn.business == uuid);
             business["userCheckIn"] = checkIn;
             return business;
+        });
+        const businessPosts = businessDataRows.map(obj => obj.user_posts);
+        const whatsPoppinFeed = [...businessDataRows, ...businessPosts].sort((a, b) => { 
+            if(b.userCheckIn && a.userCheckIn) return b.userCheckIn - a.userCheckIn; // if a doesn't have a name and b does, then put a above b
+            return b.created - a.created
         });
         response.json(whatsPoppinFeed);
     }
