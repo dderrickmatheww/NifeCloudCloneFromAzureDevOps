@@ -19,8 +19,11 @@ const getUser = functions.https.onRequest(async (request, response) => {
                 user_favorite_places: true,
                 user_friends: true,
                 user_check_ins: true,
-                user_posts: true,
-                user_last_visited: true
+                user_posts: {
+                    take: 50,
+                },
+                user_last_visited: true,
+                user_favorite_drinks: true,
             }
         })
         response.json(user);
@@ -75,8 +78,11 @@ const updateUser = functions.https.onRequest(async (request, response) => {
                 user_favorite_places: true,
                 user_friends: true,
                 user_check_ins: true,
-                user_posts: true,
+                user_posts: {
+                    take: 50,
+                },
                 user_last_visited: true,
+                user_favorite_drinks: true,
             }
         })
         response.json(res);
@@ -88,7 +94,7 @@ const updateUser = functions.https.onRequest(async (request, response) => {
 });
 
 const updateOrDeleteFavorites = functions.https.onRequest(async (request, response) => {
-    const { user, business, isAdding, id } = request.body;
+    const { user, business, isAdding, id, businessName } = request.body;
     functions.logger.log(`updateOrDeleteFavorites FIRED!`);
     try {
         await validateToken()
@@ -96,11 +102,9 @@ const updateOrDeleteFavorites = functions.https.onRequest(async (request, respon
             const res = await prisma.user_favorite_places.create({
                 data:{
                     business,
+                    businessName,
                     user,
                     created: new Date()
-                },
-                include:{
-                    users: true
                 }
             })
             response.json(res);
