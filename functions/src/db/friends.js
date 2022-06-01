@@ -37,7 +37,8 @@ const getUserFriends = functions.https.onRequest(async (request, response) => {
         const { userId } = JSON.parse(request.body);
         const userFriends = await prisma.user_friends.findMany({
             where: {
-                userId
+                userId,
+                isFriend: true
             },
             include: {
                 users_user_friends_friendIdTousers: true
@@ -56,7 +57,7 @@ const getUserFriendsPaginated = functions.https.onRequest(async (request, respon
     try {
         // const {uuid} = validateToken(req.headers.authorization)
         functions.logger.log(`body: ${request.body}`);
-        const { userId, take, skip } = JSON.parse(request.body);
+        const { userId, take, skip } = request.body;
         const userFriends = await prisma.user_friends.findMany({
             take,
             skip,
