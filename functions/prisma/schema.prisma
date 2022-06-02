@@ -26,8 +26,6 @@ model businesses {
   email           String?           @db.VarChar
   displayName     String?           @db.VarChar
   phoneNumber     String?           @db.VarChar
-  latitude        String?           @db.VarChar
-  longitude       String?           @db.VarChar
   ownerName       String?           @db.VarChar
   photoSource     String?           @db.VarChar
   lastLogin       DateTime?         @db.Timestamp(6)
@@ -37,6 +35,8 @@ model businesses {
   zip             String?           @db.VarChar
   country         String?           @db.VarChar
   state           String?           @db.VarChar
+  latitude        Float?
+  longitude       Float?
   users           users?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   business_events business_events[]
   user_posts      user_posts[]

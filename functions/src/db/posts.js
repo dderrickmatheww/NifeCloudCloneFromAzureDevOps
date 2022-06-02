@@ -174,14 +174,15 @@ const getPostsPaginated = functions.https.onRequest(async (request, response) =>
 const updatePostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { postId, description, image } = request.body;
+        const { postId, description, image, isFlagged } = request.body;
         const user = await prisma.user_posts.update({
             where: {
                 id: postId
             },
             data: {
                 description,
-                image 
+                image,
+                isFlagged 
             }
         });
         response.json(user);
