@@ -10,7 +10,7 @@ const testLocally = process.env.LocalTesting == "true";
 const createFriendRequest = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, friendId } = JSON.parse(request.body);
+        const { userId, friendId } = request.body;
         let userFriendship;
         const friendship = await prisma.user_friends.findFirst({
             where: {
@@ -54,7 +54,7 @@ const createFriendRequest = functions.https.onRequest(async (request, response) 
 const acceptFriendRequest = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, friendId } = JSON.parse(request.body);
+        const { userId, friendId } = request.body;
         const usersFriendship = await prisma.user_friends.findFirst({
             where: {
                 userId,
@@ -125,7 +125,7 @@ const acceptFriendRequest = functions.https.onRequest(async (request, response) 
 const rejectFriendRequest = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, friendId } = JSON.parse(request.body);
+        const { userId, friendId } = request.body;
         const usersFriendship = await prisma.user_friends.findFirst({
             where: {
                 userId,
@@ -195,7 +195,7 @@ const rejectFriendRequest = functions.https.onRequest(async (request, response) 
 const cancelFriendRequest = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, friendId } = JSON.parse(request.body);
+        const { userId, friendId } = request.body;
         const usersFriendship = await prisma.user_friends.findFirst({
             where: {
                 userId,
@@ -226,7 +226,7 @@ const cancelFriendRequest = functions.https.onRequest(async (request, response) 
 const getUserSentFriendRequests = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId } = JSON.parse(request.body);
+        const { userId } = request.body;
         const sentFriendRequests = await prisma.user_friends.findMany({
             where: {
                 userId,
@@ -244,7 +244,7 @@ const getUserSentFriendRequests = functions.https.onRequest(async (request, resp
 const getUserSentFriendRequestsPaginated = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, take, skip } = JSON.parse(request.body);
+        const { userId, take, skip } = request.body;
         const sentFriendRequests = await prisma.user_friends.findMany({
             take,
             skip,
@@ -264,7 +264,7 @@ const getUserSentFriendRequestsPaginated = functions.https.onRequest(async (requ
 const getUserPendingFriendRequests = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId } = JSON.parse(request.body);
+        const { userId } = request.body;
         const pendingFriendRequest = await prisma.user_friends.findMany({
             where: {
                 friendId: userId,
@@ -282,7 +282,7 @@ const getUserPendingFriendRequests = functions.https.onRequest(async (request, r
 const getUserPendingFriendRequestsPaginated = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, skip, take } = JSON.parse(request.body);
+        const { userId, skip, take } = request.body;
         const pendingFriendRequest = await prisma.user_friends.findMany({
             skip,
             take,
