@@ -1,8 +1,16 @@
 const admin = require('firebase-admin');
 admin.initializeApp();
-const { getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn} = require('./src/db/users');
-const { getBusinessCheckIns, getBusiness, getFriendCheckIns, getNifeBusinessesByState} = require("./src/db/businesses");
-const { getBusinessesNearby, searchBusinesses} = require('./src/yelp');
+const { getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn } = require('./src/db/users');
+const { getBusinessesNearby, searchBusinesses, getBusinessesByPhoneNumber } = require('./src/yelp');
+const { 
+    getBusinessCheckIns, 
+    getBusiness, 
+    getFriendCheckIns, 
+    getNifeBusinessesByState, 
+    updateBusiness, 
+    businessesThatAreNotVerified,
+    businessesThatAreNotVerifiedTest 
+} = require("./src/db/businesses");
 const { 
     getUserFriendById, 
     deleteUserFriendship, 
@@ -43,12 +51,13 @@ const index = (req, res) => {
         case '/updateUser':
             return updateUser(req, res);
         case '/updateOrDeleteFavorites':
-            return updateOrDeleteFavorites(req, res)
+            return updateOrDeleteFavorites(req, res);
         case '/createCheckIn':
-            return createCheckIn(req, res)
+            return createCheckIn(req, res);
         case '/deleteCheckIn':
-            return deleteCheckIn(req, res)
-        //Post
+            return deleteCheckIn(req, res);
+
+        //Posts
         case '/getPostById':
             return  getPostById(req, res);
         case '/getPosts':
@@ -95,19 +104,28 @@ const index = (req, res) => {
                 return acceptFriendRequest(req, res);
         case '/cancelFriendRequest':
                 return cancelFriendRequest(req, res);
+
         //Business
         case '/getBusinessesNearby':
             return getBusinessesNearby(req, res);
+        case '/getBusinessesByPhoneNumber':
+            return getBusinessesByPhoneNumber(req, res);
         case '/searchBusinesses':
             return searchBusinesses(req, res);
         case '/getBusiness':
-            return getBusiness(req, res)
+            return getBusiness(req, res);
+        case '/updateBusiness':
+            return updateBusiness(req, res);
+        case '/businessesThatAreNotVerifiedTest':
+            return businessesThatAreNotVerifiedTest(req, res);
         case '/getBusinessCheckIns':
-            return getBusinessCheckIns(req, res)
+            return getBusinessCheckIns(req, res);
         case '/getFriendCheckIns':
-            return getFriendCheckIns(req, res)
+            return getFriendCheckIns(req, res);
         case '/getNifeBusinessesByState':
-            return getNifeBusinessesByState(req, res)
+            return getNifeBusinessesByState(req, res);
+
+        //Default 
         default:
             res.send('function not defined');
     }

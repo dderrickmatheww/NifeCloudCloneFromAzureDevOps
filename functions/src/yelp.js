@@ -51,7 +51,31 @@ const searchBusinesses = functions.https.onRequest(async (request, response) => 
     }
 });
 
+const getBusinessesByPhoneNumber = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`getBusinessesByPhoneNumber FIRED!`);
+    const { phoneNumber } = request.body;
+    const url = `https://api.yelp.com/v3/businesses/search/phone?phone=${phoneNumber}`
+    try {
+        await validateToken();
+        const {data} = await axios.get(
+            url,
+            {
+                headers:{
+                    Authorization: "Bearer " + YELP_PLACE_KEY
+                }
+            }
+        )
+        const {businesses} = data;
+        response.json(businesses);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 module.exports = {
     getBusinessesNearby,
-    searchBusinesses
+    searchBusinesses,
+    getBusinessesByPhoneNumber
 }

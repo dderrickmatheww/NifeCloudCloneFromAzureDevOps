@@ -22,6 +22,7 @@ const getWhatsPoppinFeed = functions.https.onRequest(async (request, response) =
                 },
             },
         });
+        console.log(businessCheckInCount)
         const businessData = await prisma.businesses.findMany({
             where: {
                 uuid: {
@@ -33,6 +34,7 @@ const getWhatsPoppinFeed = functions.https.onRequest(async (request, response) =
                 user_posts: true
             }
         });
+        console.log(businessCheckInCount.map(obj => obj.business))
         const businessDataRows = businessData.map((business) => {
             const { uuid } = business;
             const checkIn = businessCheckInCount.find(checkIn => checkIn.business == uuid);
