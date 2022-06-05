@@ -1,15 +1,8 @@
 const functions = require('firebase-functions');
 const { PrismaClient } = require('@prisma/client')
 const { validateToken } = require("../validation");
-const nodemailer = require('nodemailer');
 const prisma = new PrismaClient();
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD
-    }
-});
+const { postEmailTemplate, sendEmail } = require("../util");
 
 const testLocally = process.env.LocalTesting == "true";
 
@@ -274,42 +267,20 @@ const postsThatAreFlaggedTest = functions.https.onRequest(async (request, respon
                     isFlagged: '1'
                 }
             });
-            const mailOptions = {
-                from: `Nife Firebase Cloud Functions <${process.env.EMAIL}>`,
-                to: `${process.env.TOEMAIL}`,
-                subject: 'Report for Flagged Posts', // email subject
-                html: `<p style="font-size: 16px;">Report for flagged posts</p>
-                    <br />
-                    <table style="font-family: Arial, Helvetica, sans-serif; border-collapse: collapse; width: 100%;">
-                        <tr>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">User Id</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Post Id</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Description</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Image</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Created</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Delete Post</th>
-                        </tr>
-                        ${userPosts.map((value, index) => {
-                            return `<tr>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.userId}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.postId}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.description}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.image}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.created}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;"><a href="${testLocally ? 'http://localhost:8080' : 'https://us-central1-nife-75d60.cloudfunctions.net'}/deletePostById?postId=${value.postId}">Delete</a></td>
-                            </tr>`
-                        }).join(' ')}
-                    </table>`
-            };
-            const { error, info } = await transporter.sendMail(mailOptions);
-            if (error) {
-                functions.logger.error(`isFlagged report email failed: ${error.message}`);
-                response.json(error.message);
+            if (userPosts.length > 0) {
+                const columns = [
+                    'User Id',
+                    'Post Id',
+                    'Description',
+                    'Image',
+                    'Created',
+                    'Delete Posts'
+                ];
+                const mailOptions = postEmailTemplate({ columns, values: userPosts });
+                sendEmail({ mailOptions });
             }
-            else {
-                functions.logger.log(`isFlagged report email sent successfully: ${info}`);
-                response.json(info);
-            }
+            functions.logger.log(`isFlagged report email ran successfully!`);
+            response.json({ result: 'success' });
         }
         else {
             await prisma.user_posts.deleteMany({
@@ -321,6 +292,11 @@ const postsThatAreFlaggedTest = functions.https.onRequest(async (request, respon
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
+        response.json({ 
+            result: {
+                error: error.message
+            }
+        });
     }
 });
 
@@ -333,53 +309,36 @@ const postsThatAreFlagged = functions.pubsub.schedule('every 24 hours').onRun(as
                     isFlagged: '1'
                 }
             });
-            const mailOptions = {
-                from: `Nife Firebase Cloud Functions <${process.env.EMAIL}>`,
-                to: `${process.env.TOEMAIL}`,
-                subject: 'Report for Flagged Posts', // email subject
-                html: `<p style="font-size: 16px;">Report for flagged posts</p>
-                    <br />
-                    <table style="font-family: Arial, Helvetica, sans-serif; border-collapse: collapse; width: 100%;">
-                        <tr>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">User Id</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Post Id</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Description</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Image</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Created</th>
-                            <th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">Delete Post</th>
-                        </tr>
-                        ${userPosts.map((value, index) => {
-                            return `<tr>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.userId}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.postId}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.description}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.image}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${value.created}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;"><a href="${testLocally ? 'http://localhost:8080' : 'https://us-central1-nife-75d60.cloudfunctions.net'}/deletePostById?postId=${value.postId}">Delete</a></td>
-                            </tr>`
-                        }).join(' ')}
-                    </table>`
-            };
-            const { error, info } = await transporter.sendMail(mailOptions);
-            if (error) {
-                functions.logger.error(`isFlagged report email failed: ${error.message}`);
-                response.json(error.message);
+            if (userPosts.length > 0) {
+                const columns = [
+                    'User Id',
+                    'Post Id',
+                    'Description',
+                    'Image',
+                    'Created',
+                    'Delete Posts'
+                ];
+                const mailOptions = postEmailTemplate({ columns, values: userPosts });
+                sendEmail({ mailOptions });
             }
-            else {
-                functions.logger.log(`isFlagged report email sent successfully: ${info}`);
-                response.json(info);
-            }
+            functions.logger.log(`isFlagged report email ran successfully!`);
+            response.json({ result: 'success' });
         }
         else {
             await prisma.user_posts.deleteMany({
                 where: {
-                    isFlagged: '1'
+                    isFlagged: !shouldEmail
                 }
             });
         }
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
+        response.json({ 
+            result: {
+                error: error.message
+            }
+        });
     }
 });
 

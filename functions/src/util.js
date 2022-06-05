@@ -1,3 +1,12 @@
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD
+    }
+});
+
 const testLocally = process.env.LocalTesting == "true";
 
 const postEmailTemplate = ({ columns, values }) => {
@@ -11,7 +20,7 @@ const postEmailTemplate = ({ columns, values }) => {
                 <tr>
                     ${columns.map((column, index) => {
                         return `<th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">${ column }</th>`
-                    })}
+                    }).join(' ')}
                 </tr>
                 ${values.map((value, index) => {
                     return `<tr>
@@ -38,28 +47,22 @@ const businessEmailTemplate = ({ columns, values }) => {
                 <tr>
                     ${columns.map((column, index) => {
                         return `<th style="padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #4B0082; color: white; border: 1px solid #ddd; padding: 8px;">${ column }</th>`
-                    })}
+                    }).join(' ')}
                 </tr>
                 ${values.map((value, index) => {
                     return `<tr>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.userId}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.uuid}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${value.lastModified}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${value.created}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.email}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.displayName}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.phoneNumber}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${value.latitude}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${value.longitude}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.ownerName}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.photoSource}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${value.lastLogin}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.businessId}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.street}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.city}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.state}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.zip}</td>
-                        <td style="border: 1px solid #ddd; padding: 8px;">${value.country}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;"><a href="${value.proofOfAddress}">Proof Of Address</a></td>
                         <td style="border: 1px solid #ddd; padding: 8px;">${value.verified}</td>
                         <td style="border: 1px solid #ddd; padding: 8px;"><a href="${testLocally ? 'http://localhost:8080' : 'https://us-central1-nife-75d60.cloudfunctions.net'}/verifyBusiness?uuid=${value.uuid}">Verify</a></td>
@@ -69,7 +72,15 @@ const businessEmailTemplate = ({ columns, values }) => {
     });
 }
 
+const sendEmail = async ({ mailOptions }) => {
+    const { error } = await transporter.sendMail(mailOptions);
+    if (error) {
+        functions.logger.error(`Email did not send - ${error.message}`);
+    }
+}
+
 module.exports = {
     businessEmailTemplate,
-    postEmailTemplate
+    postEmailTemplate,
+    sendEmail
 }

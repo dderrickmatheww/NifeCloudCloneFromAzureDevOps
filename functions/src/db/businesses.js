@@ -2,17 +2,10 @@ const functions = require('firebase-functions');
 const { PrismaClient } = require('@prisma/client');
 const {validateToken} = require("../validation");
 const states = require('us-state-converter');
-const nodemailer = require('nodemailer');
 const prisma = new PrismaClient();
-const { businessEmailTemplate } = require("../util");
+const { businessEmailTemplate, sendEmail } = require("../util");
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD
-    }
-});
+
 
 const getBusiness = functions.https.onRequest(async (request, response) => {
     functions.logger.log(`getBusiness FIRED!`);
@@ -62,7 +55,7 @@ const updateBusiness = functions.https.onRequest(async (request, response) => {
     }
 });
 
-const businessesThatAreNotVerified = functions.pubsub.schedule('every 24 hours').onRun(async () => { 
+const businessesThatAreNotVerified = functions.pubsub.schedule('every 24 hours').onRun(async (request, response) => { 
     try {
         const shouldEmail = true;
         if (shouldEmail) {
@@ -71,37 +64,29 @@ const businessesThatAreNotVerified = functions.pubsub.schedule('every 24 hours')
                     verified: false
                 }
             });
-            const columns = [
-                'User Id',
-                'uuid',
-                'Last Modified',
-                'Created',
-                'Email',
-                'Display Name',
-                'Phone Number',
-                'Latitude',
-                'Longitude',
-                'Owner Name',
-                'Photo',
-                'Last Login',
-                'Business Id',
-                'Address',
-                'City',
-                'State',
-                'Zip',
-                'Country',
-                'Proof Of Address',
-                'Business Verification Status',
-                'Verification button'
-            ]
-            const mailOptions = businessEmailTemplate({ columns, values: businesses });
-            const { error, info } = await transporter.sendMail(mailOptions);
-            if (error) {
-                functions.logger.error(`Business verification report email failed: ${error.message}`);
+            if (businesses.length > 0) {
+                const columns = [
+                    'User Id',
+                    'uuid',
+                    'Email',
+                    'Display Name',
+                    'Phone Number',
+                    'Owner Name',
+                    'Photo',
+                    'Business Id',
+                    'Address',
+                    'City',
+                    'State',
+                    'Zip',
+                    'Proof Of Address',
+                    'Business Verification Status',
+                    'Verification button'
+                ];
+                const mailOptions = businessEmailTemplate({ columns, values: businesses });
+                sendEmail({ mailOptions });
             }
-            else {
-                functions.logger.log(`Business verification report email sent successfully: ${info}`);
-            }
+            functions.logger.log(`Business verification report email sent successfully!`);
+            response.json({ result: 'success' });
         }
         else {
             await prisma.user_posts.deleteMany({
@@ -113,6 +98,11 @@ const businessesThatAreNotVerified = functions.pubsub.schedule('every 24 hours')
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
+        response.json({ 
+            result: {
+                error: error.message
+            }
+        });
     }
 });
 
@@ -125,39 +115,29 @@ const businessesThatAreNotVerifiedTest = functions.https.onRequest(async (reques
                     verified: false
                 }
             });
-            const columns = [
-                'User Id',
-                'uuid',
-                'Last Modified',
-                'Created',
-                'Email',
-                'Display Name',
-                'Phone Number',
-                'Latitude',
-                'Longitude',
-                'Owner Name',
-                'Photo',
-                'Last Login',
-                'Business Id',
-                'Address',
-                'City',
-                'State',
-                'Zip',
-                'Country',
-                'Proof Of Address',
-                'Business Verification Status',
-                'Verification button'
-            ]
-            const mailOptions = businessEmailTemplate({ columns, values: businesses });
-            const { error, info } = await transporter.sendMail(mailOptions);
-            if (error) {
-                functions.logger.error(`Business verification report email failed: ${error.message}`);
-                response.json(error.message);
+            if (businesses.length > 0) {
+                const columns = [
+                    'User Id',
+                    'uuid',
+                    'Email',
+                    'Display Name',
+                    'Phone Number',
+                    'Owner Name',
+                    'Photo',
+                    'Business Id',
+                    'Address',
+                    'City',
+                    'State',
+                    'Zip',
+                    'Proof Of Address',
+                    'Business Verification Status',
+                    'Verification button'
+                ];
+                const mailOptions = businessEmailTemplate({ columns, values: businesses });
+                sendEmail({ mailOptions });
             }
-            else {
-                functions.logger.log(`Business verification report email sent successfully: ${info}`);
-                response.json(info);
-            }
+            functions.logger.log(`Business verification report email sent successfully!`);
+            response.json({ result: 'success' });
         }
         else {
             await prisma.user_posts.deleteMany({
@@ -169,8 +149,40 @@ const businessesThatAreNotVerifiedTest = functions.https.onRequest(async (reques
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
+        response.json({ 
+            result: {
+                error: error.message
+            }
+        });
     }
 });
+
+const verifyBusiness = functions.https.onRequest(async (request, response) => {
+    try {
+        // const {uuid} = validateToken(req.headers.authorization)
+        const queryParam = Object.keys(request.body).length === 0;
+        let { uuid } = queryParam ? request.query : request.body;
+        const updateBusiness = await prisma.businesses.update({
+            where: {
+                uuid
+            },
+            data: {
+                verified: true
+            }
+        });
+        if (queryParam) {
+            response.json('<h1 style="text-align: center; color: green; -webkit-text-stroke: 1px black;">Business Verified</h1>');
+        }
+        else {
+            response.json(updateBusiness);
+        }
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 
 //TODO right TTL for checkins
 const getBusinessCheckIns = functions.https.onRequest(async (request, response) => {
@@ -258,5 +270,6 @@ module.exports = {
     getFriendCheckIns,
     getNifeBusinessesByState,
     businessesThatAreNotVerified,
-    businessesThatAreNotVerifiedTest
+    businessesThatAreNotVerifiedTest,
+    verifyBusiness
 }

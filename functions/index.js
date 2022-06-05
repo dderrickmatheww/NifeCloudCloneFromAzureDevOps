@@ -9,7 +9,8 @@ const {
     getNifeBusinessesByState, 
     updateBusiness, 
     businessesThatAreNotVerified,
-    businessesThatAreNotVerifiedTest 
+    businessesThatAreNotVerifiedTest,
+    verifyBusiness 
 } = require("./src/db/businesses");
 const { 
     getUserFriendById, 
@@ -124,6 +125,8 @@ const index = (req, res) => {
             return getFriendCheckIns(req, res);
         case '/getNifeBusinessesByState':
             return getNifeBusinessesByState(req, res);
+        case '/verifyBusiness':
+            return verifyBusiness(req, res);
 
         //Default 
         default:
