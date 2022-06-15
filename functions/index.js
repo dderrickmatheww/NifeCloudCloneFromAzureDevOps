@@ -1,6 +1,8 @@
 const admin = require('firebase-admin');
 admin.initializeApp();
-const { getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn} = require('./src/db/users');
+const { getUser, updateUser, updateOrDeleteFavorites, createCheckIn, deleteCheckIn, removeFavoriteDrink,
+    addFavoriteDrink
+} = require('./src/db/users');
 const { getBusinessCheckIns, getBusiness, getFriendCheckIns, getNifeBusinessesByState} = require("./src/db/businesses");
 const { getBusinessesNearby, searchBusinesses} = require('./src/yelp');
 const { 
@@ -48,6 +50,10 @@ const index = (req, res) => {
             return createCheckIn(req, res)
         case '/deleteCheckIn':
             return deleteCheckIn(req, res)
+        case '/removeFavoriteDrink':
+            return removeFavoriteDrink(req, res)
+        case '/addFavoriteDrink':
+            return addFavoriteDrink(req, res)
         //Post
         case '/getPostById':
             return  getPostById(req, res);
