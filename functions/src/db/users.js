@@ -24,7 +24,16 @@ const getUser = functions.https.onRequest(async (request, response) => {
                 },
                 user_last_visited: true,
                 user_favorite_drinks: true,
-                user_friends_user_friends_friendIdTousers:true,
+                user_friends_user_friends_friendIdTousers: {
+                    include:{
+                        users: {
+                            select:{
+                                displayName: true,
+                                photoSource: true
+                            }
+                        }
+                    }
+                },
             }
         })
         response.json(user);
@@ -84,6 +93,16 @@ const updateUser = functions.https.onRequest(async (request, response) => {
                 },
                 user_last_visited: true,
                 user_favorite_drinks: true,
+                user_friends_user_friends_friendIdTousers: {
+                    include:{
+                        users: {
+                            select:{
+                                displayName: true,
+                                photoSource: true
+                            }
+                        }
+                    }
+                },
             }
         })
         response.json(res);
