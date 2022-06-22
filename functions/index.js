@@ -43,40 +43,40 @@ const {
 } = require('./src/db/whatsPoppin');
 
 // eslint-disable-next-line consistent-return
-const index = (req, res) => {
-    switch (req.path) {
-        //User
-        case '/getUser':
-            return getUser(req, res);
-        case '/searchUsers':
-            return searchUsers(req, res)
-        case '/updateUser':
-            return updateUser(req, res);
-        case '/updateOrDeleteFavorites':
-            return updateOrDeleteFavorites(req, res)
-        case '/createCheckIn':
-            return createCheckIn(req, res)
-        case '/deleteCheckIn':
-            return deleteCheckIn(req, res)
-        case '/removeFavoriteDrink':
-            return removeFavoriteDrink(req, res)
-        case '/addFavoriteDrink':
-            return addFavoriteDrink(req, res)
-        //Post
-        case '/getPostById':
-            return  getPostById(req, res);
-        case '/getPosts':
-            return getPosts(req, res);
-        case '/getPostsPaginated':
-            return getPostsPaginated(req, res);
-        case '/updatePostById':
-            return updatePostById(req, res);
-        case '/deletePostById':
-            return deletePostById(req, res);
-        case '/postsThatAreFlaggedTest':
-            return postsThatAreFlaggedTest(req, res);
-        case '/createPost':
-            return createPost(req, res);
+// const index = (req, res) => {
+//     switch (req.path) {
+//         //User
+//         case '/getUser':
+//             return getUser(req, res);
+//         case '/searchUsers':
+//             return searchUsers(req, res);
+//         case '/updateUser':
+//             return updateUser(req, res);
+//         case '/updateOrDeleteFavorites':
+//             return updateOrDeleteFavorites(req, res);
+//         case '/createCheckIn':
+//             return createCheckIn(req, res);
+//         case '/deleteCheckIn':
+//             return deleteCheckIn(req, res);
+//         case '/removeFavoriteDrink':
+//             return removeFavoriteDrink(req, res)
+//         case '/addFavoriteDrink':
+//             return addFavoriteDrink(req, res)
+//         //Post
+//         case '/getPostById':
+//             return  getPostById(req, res);
+//         case '/getPosts':
+//             return getPosts(req, res);
+//         case '/getPostsPaginated':
+//             return getPostsPaginated(req, res);
+//         case '/updatePostById':
+//             return updatePostById(req, res);
+//         case '/deletePostById':
+//             return deletePostById(req, res);
+//         case '/postsThatAreFlaggedTest':
+//             return postsThatAreFlaggedTest(req, res);
+//         case '/createPost':
+//             return createPost(req, res);
 
 //         //Whats Poppin
 //         case '/getWhatsPoppinFeed':
