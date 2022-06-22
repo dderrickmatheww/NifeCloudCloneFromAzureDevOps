@@ -12,7 +12,7 @@
     "pull": "npx prisma db pull && npx prisma generate"
   },
   "engines": {
-    "node": "10"
+    "node": "16"
   },
   "main": "index.js",
   "dependencies": {

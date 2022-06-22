@@ -38,6 +38,7 @@ model businesses {
   latitude        Float?
   longitude       Float?
   proofOfAddress  String?           @db.VarChar
+  verified        Boolean?
   users           users?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   business_events business_events[]
   user_posts      user_posts[]
