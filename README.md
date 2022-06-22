@@ -10,6 +10,7 @@ Node.js application that runs cloud related functions
 
 ## BEFORE DEPLOYMENT
 * Make sure you comment out the `index` function in `module.exports` in the `root/functions/index.js` file
+* Ensure you are using the connection string and not the SQL IP in your `.env` file
 
 # IMPORTANT
 When you update the SQL schema make sure to run, before you run the server or deploy:

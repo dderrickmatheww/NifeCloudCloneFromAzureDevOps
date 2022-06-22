@@ -44,6 +44,27 @@ const getUser = functions.https.onRequest(async (request, response) => {
     }
 });
 
+const searchUsers = functions.https.onRequest(async (request, response) => {
+    functions.logger.log(`getUser FIRED!`);
+    const { query } = request.body;
+    // const {uuid} = verifyToken(req.headers.authorization)
+    try {
+        await validateToken()
+        const user = await prisma.users.findUnique({
+            where: {
+                email:{
+                    contains: query
+                }
+            },
+        })
+        response.json(user);
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 const getUserById = functions.https.onRequest(async (request, response) => {
     functions.logger.log(`getUser FIRED!`);
     const { email } = request.body;
@@ -237,5 +258,6 @@ module.exports = {
     addFavoriteDrink,
     removeFavoriteDrink,
     createCheckIn,
-    deleteCheckIn
+    deleteCheckIn,
+    searchUsers
 }
