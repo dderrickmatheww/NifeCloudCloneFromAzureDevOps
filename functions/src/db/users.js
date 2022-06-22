@@ -50,14 +50,26 @@ const searchUsers = functions.https.onRequest(async (request, response) => {
     // const {uuid} = verifyToken(req.headers.authorization)
     try {
         await validateToken()
-        const user = await prisma.users.findUnique({
+        const users = await prisma.users.findMany({
             where: {
-                email:{
-                    contains: query
-                }
+                OR:[
+                    {
+                        email:{
+                            contains: query,
+                            mode: 'insensitive',
+                        }
+                    },
+                    {
+                        displayName:{
+                            contains: query,
+                            mode: 'insensitive',
+                        }
+                    },
+                ]
+
             },
         })
-        response.json(user);
+        response.json(users);
     }
     catch(error) {
         functions.logger.error(`Error: ${error.message}`);
