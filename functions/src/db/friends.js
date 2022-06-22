@@ -10,7 +10,7 @@ const getUserFriendById = functions.https.onRequest(async (request, response) =>
     try {
         // const {uuid} = validateToken(req.headers.authorization)
         functions.logger.log(`body: ${request.body}`);
-        const { userId, friendId } = JSON.parse(request.body);
+        const { userId, friendId } = request.body;
         const userFriend = await prisma.user_friends.findMany({
             where: {
                 userId,
@@ -34,7 +34,7 @@ const getUserFriends = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
         functions.logger.log(`body: ${request.body}`);
-        const { userId } = JSON.parse(request.body);
+        const { userId } = request.body;
         const userFriends = await prisma.user_friends.findMany({
             where: {
                 userId,
@@ -62,7 +62,8 @@ const getUserFriendsPaginated = functions.https.onRequest(async (request, respon
             take,
             skip,
             where: {
-                userId
+                userId,
+                isFriend: true
             },
             include: {
                 users_user_friends_friendIdTousers: true
@@ -80,7 +81,7 @@ const getUserFriendsPaginated = functions.https.onRequest(async (request, respon
 const deleteUserFriendship = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)
-        const { userId, friendId } = JSON.parse(request.body);
+        const { userId, friendId } = request.body;
         const usersFriendship = await prisma.user_friends.deleteMany({
             where: {
                 OR: [

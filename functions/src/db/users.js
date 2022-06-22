@@ -24,6 +24,16 @@ const getUser = functions.https.onRequest(async (request, response) => {
                 },
                 user_last_visited: true,
                 user_favorite_drinks: true,
+                user_friends_user_friends_friendIdTousers: {
+                    include:{
+                        users: {
+                            select:{
+                                displayName: true,
+                                photoSource: true
+                            }
+                        }
+                    }
+                },
             }
         })
         response.json(user);
@@ -83,6 +93,16 @@ const updateUser = functions.https.onRequest(async (request, response) => {
                 },
                 user_last_visited: true,
                 user_favorite_drinks: true,
+                user_friends_user_friends_friendIdTousers: {
+                    include:{
+                        users: {
+                            select:{
+                                displayName: true,
+                                photoSource: true
+                            }
+                        }
+                    }
+                },
             }
         })
         response.json(res);
@@ -173,11 +193,49 @@ const deleteCheckIn  = functions.https.onRequest(async (request, response) => {
     }
 });
 
+const removeFavoriteDrink  = functions.https.onRequest(async (request, response) => {
+    const { id } = request.body;
+    functions.logger.log(`removeFavoriteDrink FIRED!`);
+    try {
+        await validateToken()
+        const deleted = await prisma.user_favorite_drinks.delete({
+            where:{
+                id
+            }
+        })
+        response.json({deleted});
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
+const addFavoriteDrink  = functions.https.onRequest(async (request, response) => {
+    const { description, user } = request.body;
+    functions.logger.log(`addFavoriteDrink FIRED!`);
+    try {
+        await validateToken()
+        const drink = await prisma.user_favorite_drinks.create({
+            data:{
+                description, user, created: new Date()
+            }
+        })
+        response.json({drink});
+    }
+    catch(error) {
+        functions.logger.error(`Error: ${error.message}`);
+        response.json(error);
+    }
+});
+
 
 module.exports = {
     getUser,
     updateUser,
     updateOrDeleteFavorites,
+    addFavoriteDrink,
+    removeFavoriteDrink,
     createCheckIn,
     deleteCheckIn
 }
