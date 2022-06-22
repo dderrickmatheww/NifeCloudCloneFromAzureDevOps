@@ -3,8 +3,6 @@ const { PrismaClient } = require('@prisma/client')
 const { validateToken } = require("../validation");
 const prisma = new PrismaClient();
 
-const testLocally = process.env.LocalTesting == "true";
-
 const getWhatsPoppinFeed = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)

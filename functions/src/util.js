@@ -7,8 +7,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const testLocally = process.env.LocalTesting == "true";
-
 const postEmailTemplate = ({ columns, values }) => {
     return ({
         from: `Nife Firebase Cloud Functions <${process.env.EMAIL}>`,

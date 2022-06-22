@@ -4,8 +4,6 @@ const { validateToken } = require("../validation");
 const prisma = new PrismaClient();
 const { postEmailTemplate, sendEmail } = require("../util");
 
-const testLocally = process.env.LocalTesting == "true";
-
 const getPostById = functions.https.onRequest(async (request, response) => {
     try {
         // const {uuid} = validateToken(req.headers.authorization)

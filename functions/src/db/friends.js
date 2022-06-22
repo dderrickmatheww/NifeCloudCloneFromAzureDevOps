@@ -3,8 +3,6 @@ const { PrismaClient } = require('@prisma/client')
 const { validateToken } = require("../validation");
 const prisma = new PrismaClient();
 
-const testLocally = process.env.LocalTesting == "true";
-
 // User Friends
 const getUserFriendById = functions.https.onRequest(async (request, response) => {
     try {
